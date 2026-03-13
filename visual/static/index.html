@@ -69,6 +69,22 @@
             color: var(--accent-text);
         }
         .logo span { color: var(--text-1); font-weight: 500; }
+        .header-nav {
+            display: flex;
+            gap: 16px;
+        }
+        .header-link {
+            color: var(--text-2);
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .header-link:hover {
+            color: var(--text-1);
+            background: rgba(255,255,255,0.05);
+        }
         .auth-status {
             display: flex;
             align-items: center;
@@ -770,6 +786,9 @@
 <body>
     <div class="header">
         <div class="logo">🧠 <span>Brain</span> Visual</div>
+        <div class="header-nav">
+            <a href="/guide" class="header-link">📖 文档</a>
+        </div>
         <div class="auth-status" id="authStatus">
             <span class="scope-badge none" id="scopeBadge">访客</span>
         </div>

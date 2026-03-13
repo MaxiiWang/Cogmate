@@ -305,6 +305,15 @@ async def timeline_view():
     return {"error": "Timeline view not found"}
 
 
+@app.get("/guide")
+async def guide_view():
+    """文档页面"""
+    docs_file = STATIC_DIR / "docs.html"
+    if docs_file.exists():
+        return FileResponse(docs_file)
+    return {"error": "Docs not found"}
+
+
 @app.get("/api/visual/auth/verify")
 async def auth_verify(token: str = Query(...)):
     """验证 Token"""

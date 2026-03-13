@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文档 - Brain Visual</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-0: #17181c;
+            --bg-1: #1e2025;
+            --bg-2: #26282e;
+            --text-1: #e8e6e3;
+            --text-2: #a8a5a0;
+            --text-3: #6b6965;
+            --accent: #d4a054;
+            --accent-text: #e8c992;
+            --border: rgba(255,255,255,0.06);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-0);
+            color: var(--text-1);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(30, 32, 37, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--accent-text);
+            text-decoration: none;
+        }
+        .logo span { color: var(--text-1); font-weight: 500; }
+        .header-nav {
+            display: flex;
+            gap: 16px;
+        }
+        .header-link {
+            color: var(--text-2);
+            text-decoration: none;
+            font-size: 0.9em;
+            padding: 6px 12px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+        .header-link:hover, .header-link.active {
+            color: var(--text-1);
+            background: rgba(255,255,255,0.05);
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Content */
+        .docs-content {
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 40px;
+        }
+
+        .docs-content h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--text-1);
+            margin: 0 0 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .docs-content h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4em;
+            font-weight: 600;
+            color: var(--text-1);
+            margin: 32px 0 16px;
+        }
+
+        .docs-content h3 {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: var(--text-1);
+            margin: 24px 0 12px;
+        }
+
+        .docs-content p {
+            color: var(--text-2);
+            line-height: 1.8;
+            margin-bottom: 16px;
+        }
+
+        .docs-content ul, .docs-content ol {
+            color: var(--text-2);
+            line-height: 1.8;
+            margin-bottom: 16px;
+            padding-left: 24px;
+        }
+
+        .docs-content li {
+            margin-bottom: 8px;
+        }
+
+        .docs-content code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+            background: var(--bg-2);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: var(--accent-text);
+        }
+
+        .docs-content pre {
+            background: var(--bg-0);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+        }
+
+        .docs-content pre code {
+            background: none;
+            padding: 0;
+            font-size: 0.85em;
+            color: var(--text-2);
+        }
+
+        .docs-content a {
+            color: var(--accent-text);
+            text-decoration: underline;
+        }
+
+        .tip {
+            display: flex;
+            gap: 12px;
+            padding: 16px;
+            background: rgba(212, 160, 84, 0.1);
+            border: 1px solid rgba(212, 160, 84, 0.3);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .tip-icon {
+            flex-shrink: 0;
+        }
+
+        .tip p {
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        .info-box {
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .info-box h4 {
+            margin: 0 0 8px;
+            color: var(--text-1);
+            font-size: 1em;
+        }
+
+        .info-box p {
+            margin: 0;
+            font-size: 0.9em;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        th {
+            color: var(--text-1);
+            font-weight: 600;
+        }
+
+        td {
+            color: var(--text-2);
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-3);
+            font-size: 0.85em;
+        }
+
+        .footer a {
+            color: var(--accent-text);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo">🧠 <span>Brain</span> Visual</a>
+        <div class="header-nav">
+            <a href="/" class="header-link">首页</a>
+            <a href="/guide" class="header-link active">📖 文档</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <article class="docs-content">
+            <h1>Brain Visual 文档</h1>
+            <p>Brain Visual 是 <a href="https://github.com/MaxiiWang/SimWorld" target="_blank">SimWorld</a> 的可视化界面，让你通过 3D 图谱、时间线、对话等方式探索知识库。</p>
+
+            <div class="tip">
+                <span class="tip-icon">💡</span>
+                <p>访问此界面需要有效的 Token。Token 由知识库所有者生成，不同 Token 有不同的权限。</p>
+            </div>
+
+            <h2>视图类型</h2>
+
+            <div class="info-box">
+                <h4>🌍 Globe View - 3D 知识图谱</h4>
+                <p>以 3D 球形展示知识节点和它们之间的关系。节点大小反映连接数，颜色表示知识类型。可以旋转、缩放和点击节点查看详情。</p>
+            </div>
+
+            <div class="info-box">
+                <h4>🌳 Tree View - 抽象层树形图</h4>
+                <p>展示从具体事实到高维洞察的抽象层级结构。帮助理解知识是如何被归纳和提炼的。</p>
+            </div>
+
+            <div class="info-box">
+                <h4>📅 Timeline View - 时间线</h4>
+                <p>按时间顺序展示知识的创建过程。可以看到知识库是如何随时间积累和演化的。</p>
+            </div>
+
+            <div class="info-box">
+                <h4>💬 Chat - 对话交互</h4>
+                <p>与知识库进行对话。提出问题，AI 会基于知识库内容给出回答，并引用相关的事实和观点。</p>
+            </div>
+
+            <h2>Token 权限</h2>
+            <p>不同类型的 Token 有不同的访问权限：</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>类型</th>
+                        <th>权限</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>full</code></td>
+                        <td>完整访问</td>
+                        <td>浏览所有视图 + 无限问答 + 编辑权限</td>
+                    </tr>
+                    <tr>
+                        <td><code>qa_public</code></td>
+                        <td>公开问答</td>
+                        <td>有次数限制的问答，适合试用</td>
+                    </tr>
+                    <tr>
+                        <td><code>browse_public</code></td>
+                        <td>仅浏览</td>
+                        <td>只能查看图谱，不能提问</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>使用方法</h2>
+
+            <h3>访问界面</h3>
+            <p>通过带 Token 的链接访问：</p>
+            <pre><code>http://your-brain-url:8000?token=YOUR_TOKEN</code></pre>
+
+            <h3>浏览知识图谱</h3>
+            <ol>
+                <li>进入首页后，点击「🌍 Globe」进入 3D 视图</li>
+                <li>拖动鼠标旋转图谱，滚轮缩放</li>
+                <li>点击节点查看详情</li>
+                <li>使用筛选器按类型过滤节点</li>
+            </ol>
+
+            <h3>对话问答</h3>
+            <ol>
+                <li>点击「💬 Chat」进入对话界面</li>
+                <li>输入你的问题</li>
+                <li>AI 会基于知识库内容回答</li>
+                <li>回答中会引用相关的事实来源</li>
+            </ol>
+
+            <h2>知识类型</h2>
+            <p>知识库中的内容按类型分类：</p>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>类型</th>
+                        <th>颜色</th>
+                        <th>说明</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>事件</td>
+                        <td>🟢 绿色</td>
+                        <td>发生过的事情</td>
+                    </tr>
+                    <tr>
+                        <td>观点</td>
+                        <td>🔵 蓝色</td>
+                        <td>个人看法和判断</td>
+                    </tr>
+                    <tr>
+                        <td>情绪</td>
+                        <td>🟣 紫色</td>
+                        <td>情感和感受</td>
+                    </tr>
+                    <tr>
+                        <td>资讯</td>
+                        <td>🟡 黄色</td>
+                        <td>外部获取的信息</td>
+                    </tr>
+                    <tr>
+                        <td>决策</td>
+                        <td>🟠 橙色</td>
+                        <td>做出的决定</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <h2>关系类型</h2>
+            <p>知识之间的关系：</p>
+            <ul>
+                <li><strong>支持</strong> - A 的观点或证据支持 B</li>
+                <li><strong>反对</strong> - A 与 B 存在矛盾或冲突</li>
+                <li><strong>延伸</strong> - A 是 B 的延伸或细化</li>
+                <li><strong>来源</strong> - A 是 B 的信息来源</li>
+                <li><strong>导致</strong> - A 导致了 B 的发生</li>
+            </ul>
+
+            <h2>获取 Token</h2>
+            <p>Token 可以通过以下方式获取：</p>
+            <ul>
+                <li>知识库所有者直接分享</li>
+                <li>在 <a href="https://wielding.ai" target="_blank">Hub</a> 平台购买</li>
+            </ul>
+        </article>
+    </div>
+
+    <div class="footer">
+        <p>Brain Visual · Part of <a href="https://github.com/MaxiiWang/SimWorld">SimWorld</a></p>
+    </div>
+</body>
+</html>
