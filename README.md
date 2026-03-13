@@ -8,6 +8,98 @@
 
 ---
 
+> ⚠️ **Vibe Coding | Work in Progress | Experimental**
+> 
+> 本项目采用 Vibe Coding 方式开发——由 AI Agent 主导编码，人类负责方向把控和验收。
+> 
+> **这是一个实验性项目，仍在积极开发中：**
+> - 代码可能存在 bug 和不完善之处
+> - API 和数据结构可能随时变更
+> - 部分功能尚未经过充分测试
+> 
+> **免责声明：** 本项目按"原样"提供，不提供任何明示或暗示的保证。使用本项目的风险由用户自行承担。作者不对因使用本项目而导致的任何数据丢失、系统故障或其他损失负责。建议在非生产环境中测试后再投入使用。
+
+---
+
+## 🚀 快速开始
+
+### 推荐方式：让你的 Agent 自主安装
+
+**本项目设计为与 AI Agent 协同工作。** 最简单的使用方式是将项目地址告诉你的 Agent，让它自主完成安装和配置：
+
+```
+请帮我安装这个项目：https://github.com/MaxiiWang/SimWorld
+
+阅读 README.md 和 SETUP.md 了解项目结构，
+然后按照指引完成数据库部署和配置。
+安装完成后，将 AGENT.md 的内容整合到你的行为规范中。
+```
+
+Agent 会：
+1. 克隆仓库并阅读文档
+2. 安装依赖和启动数据库
+3. 配置环境变量
+4. 将 `AGENT.md` 中的指令纳入自己的行为规范
+5. 开始作为你的知识管理代理工作
+
+### 备选方式：手动安装
+
+```bash
+git clone https://github.com/MaxiiWang/SimWorld.git
+cd SimWorld
+chmod +x setup.sh
+./setup.sh
+```
+
+详细步骤参见 [SETUP.md](SETUP.md)。
+
+---
+
+## 🤖 Agent 能力依赖
+
+本项目是一个**基础设施层**，核心能力依赖于你使用的 AI Agent：
+
+| 能力 | 说明 | 项目提供 |
+|------|------|---------|
+| **LLM 推理** | 理解语义、生成回答 | ❌ 需 Agent 自带 |
+| **多模态** | 图片/语音理解 | ❌ 需 Agent 自带 |
+| **聊天接入** | Telegram/微信/Discord | ❌ 需 Agent 自带 |
+| **定时任务** | Cron 调度 | ❌ 需 Agent 自带 |
+| **知识存储** | 三库写入/检索 | ✅ 本项目提供 |
+| **关系发现** | 图谱关联 | ✅ 本项目提供 |
+| **可视化** | Web 界面 | ✅ 本项目提供 |
+
+### 参考配置（作者使用）
+
+我使用 [OpenClaw](https://github.com/openclaw/openclaw) 作为 Agent 运行时：
+
+```yaml
+# OpenClaw 配置参考
+model: claude-sonnet-4-20250514   # 主力模型
+thinking: low                       # 推理模式
+
+# 聊天接入
+telegram:
+  enabled: true
+  token: ${TELEGRAM_BOT_TOKEN}
+  
+# 定时任务
+cron:
+  - schedule: "0 9 * * *"           # 每天 09:00
+    task: "执行晨间知识回顾"
+  - schedule: "0 20 * * *"          # 每天 20:00
+    task: "生成今日知识报告"
+  - schedule: "0 20 * * 0"          # 每周日 20:00
+    task: "生成周报并检查图谱健康"
+```
+
+其他兼容的 Agent 框架：
+- [Claude Code](https://github.com/anthropics/claude-code)
+- [Cursor](https://cursor.sh/)
+- 任何支持工具调用的 LLM Agent
+
+---
+
 ## ✨ 特性
 
 - **三库协同** - SQLite（元数据）+ Qdrant（向量搜索）+ Neo4j（知识图谱）
@@ -19,35 +111,7 @@
 - **可视化界面** - 3D 知识图谱浏览
 - **Token 访问控制** - 分享你的知识库给他人
 
-## 🚀 快速开始
-
-### 方式一：一键安装
-
-```bash
-git clone https://github.com/yourusername/brain-agent.git
-cd brain-agent
-chmod +x setup.sh
-./setup.sh
-```
-
-### 方式二：手动安装
-
-参见 [SETUP.md](SETUP.md) 获取详细步骤。
-
-### 验证安装
-
-```bash
-./brain stats
-```
-
-输出示例：
-```
-🧠 Brain Agent 状态
-━━━━━━━━━━━━━━━━━━━━
-📊 SQLite:  0 条记录
-🔍 Qdrant:  0 向量
-🕸️  Neo4j:   0 节点 | 0 边
-```
+---
 
 ## 📖 使用方法
 
@@ -102,30 +166,7 @@ brain.create_relation(from_id, to_id, "支持", confidence=4)
 stats = brain.stats()
 ```
 
-## 🤖 AI Agent 集成
-
-本项目专为 AI Agent（如 Claude、GPT）设计，可作为其长期记忆和知识库。
-
-### OpenClaw 集成
-
-将 `AGENT.md` 放入你的 OpenClaw workspace，Agent 会自动继承所有指令和行为规范。
-
-```bash
-cp AGENT.md ~/.openclaw/workspace/
-```
-
-### 定时任务
-
-项目包含预设的定时任务脚本：
-
-| 脚本 | 频率 | 功能 |
-|------|------|------|
-| `daily_morning.sh` | 每天 09:00 | 晨间知识回顾 |
-| `daily_evening.sh` | 每天 20:00 | 晚间知识整理 |
-| `weekly_report.sh` | 每周日 20:00 | 周报生成 |
-| `monthly_temporal_review.sh` | 每月 1 日 | 时效性知识审查 |
-
-详见 [AGENT.md](AGENT.md) 了解如何配置。
+---
 
 ## 🔌 可视化界面
 
@@ -143,29 +184,18 @@ chmod +x visual/start.sh
 ./visual/start.sh
 ```
 
-或手动启动：
-
-```bash
-cd visual && python -m uvicorn api:app --host 0.0.0.0 --port 8000
-```
-
-访问 `http://localhost:8000`
-
 ### 生成访问 Token
 
 ```bash
 ./brain visual --duration 7d --scope full
 ```
 
-输出示例：
-```
-🔗 访问链接: http://localhost:8000?token=abc123...
-```
-
 Token 权限级别：
 - `full` - 完整访问（浏览 + 问答 + 编辑）
 - `qa_public` - 公开问答（有次数限制）
 - `browse_public` - 仅浏览
+
+---
 
 ## 📁 项目结构
 
@@ -218,6 +248,8 @@ brain-agent/
     └── profile.json      # 用户档案
 ```
 
+---
+
 ## ⚙️ 配置
 
 ### 环境变量
@@ -249,25 +281,21 @@ ANTHROPIC_API_KEY=sk-ant-xxx
 }
 ```
 
+---
+
 ## 🔐 核心原则
 
 1. **写入权在用户手里** - 网络搜索的内容只能建议，不能自动写入
 2. **矛盾是最有价值的关联** - 不回避张力，主动发现并保留矛盾
 3. **简洁确认** - 存储后简短确认，不打断记录流
 
-## 🛠️ 开发
-
-```bash
-# 运行测试
-python -m pytest tests/
-
-# 代码风格
-black lib/
-```
+---
 
 ## 📝 许可证
 
 MIT License - 详见 [LICENSE](LICENSE)
+
+---
 
 ## 🙏 致谢
 
