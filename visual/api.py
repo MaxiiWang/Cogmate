@@ -139,6 +139,11 @@ STATIC_DIR = Path(__file__).parent / "static"
 app.mount("/js", StaticFiles(directory=STATIC_DIR / "js"), name="js")
 app.mount("/css", StaticFiles(directory=STATIC_DIR / "css"), name="css")
 
+@app.get("/favicon.svg")
+async def favicon():
+    """Favicon"""
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml")
+
 # ==================== 路由 ====================
 
 @app.get("/")
