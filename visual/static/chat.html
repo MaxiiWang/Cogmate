@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - 模拟世界问答</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', sans-serif;
+            background: #17181c;
+            color: #e8e4dc;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(124,153,184,0.04) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        .header {
+            background: rgba(30,32,37,0.85);
+            backdrop-filter: blur(16px) saturate(1.2);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            padding: 12px 28px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: relative; z-index: 10;
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .back-btn {
+            color: #6b665e; text-decoration: none; font-size: 0.85em;
+            padding: 4px 10px; border-radius: 4px; transition: all 0.15s;
+        }
+        .back-btn:hover { color: #e2b96a; background: rgba(212,160,84,0.08); }
+        .logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.1em; font-weight: 700; color: #7c99b8;
+        }
+        .scope-info { display: flex; align-items: center; gap: 12px; }
+        .scope-badge {
+            padding: 4px 10px; border-radius: 4px; font-size: 0.78em;
+            background: rgba(124,153,184,0.12); color: #7c99b8;
+        }
+        .qa-counter { font-size: 0.8em; color: #6b665e; }
+        .qa-counter span { color: #7c99b8; font-weight: 500; }
+
+        .chat-container {
+            flex: 1; max-width: 720px; width: 100%;
+            margin: 0 auto; padding: 24px;
+            display: flex; flex-direction: column;
+            position: relative; z-index: 1;
+        }
+
+        .messages { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+        .messages::-webkit-scrollbar { width: 5px; }
+        .messages::-webkit-scrollbar-track { background: transparent; }
+        .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+        .message { margin-bottom: 18px; display: flex; flex-direction: column; }
+        .message.user { align-items: flex-end; }
+        .message.assistant { align-items: flex-start; }
+        .message-content {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            line-height: 1.65;
+            font-size: 0.92em;
+        }
+        .message.user .message-content {
+            background: linear-gradient(135deg, #4a6d8c 0%, #3d5a75 100%);
+            color: #fff;
+            border-bottom-right-radius: 3px;
+        }
+        .message.assistant .message-content {
+            background: #1e2025;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-bottom-left-radius: 3px;
+            color: #a8a299;
+        }
+        .message-meta {
+            font-size: 0.72em; color: #6b665e;
+            margin-top: 4px; padding: 0 4px;
+        }
+
+        .input-area { border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; }
+        .input-group { display: flex; gap: 8px; }
+        .chat-input {
+            flex: 1;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #e8e4dc;
+            font-size: 0.92em;
+            resize: none;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .chat-input:focus { outline: none; border-color: rgba(124,153,184,0.4); }
+        .chat-input::placeholder { color: #6b665e; }
+        .send-btn {
+            background: linear-gradient(135deg, #4a6d8c 0%, #3d5a75 100%);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 0.92em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .send-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(74,109,140,0.25);
+        }
+        .send-btn:disabled {
+            background: #26282e;
+            color: #6b665e;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .limit-warning {
+            text-align: center; padding: 14px;
+            color: #b8868a;
+            background: rgba(184,134,138,0.08);
+            border: 1px solid rgba(184,134,138,0.15);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: none;
+            font-size: 0.88em;
+        }
+        .limit-warning.show { display: block; }
+
+        .welcome-msg { text-align: center; padding: 48px 20px; color: #6b665e; }
+        .welcome-msg h2 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: #7c99b8; font-weight: 700;
+            margin-bottom: 12px; font-size: 1.3em;
+        }
+        .welcome-msg p { max-width: 420px; margin: 0 auto; line-height: 1.6; font-size: 0.9em; }
+
+        .message-content strong { color: #e2b96a; }
+        .message-content code {
+            background: rgba(0,0,0,0.25);
+            padding: 2px 5px; border-radius: 3px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.88em;
+        }
+
+        .typing-indicator {
+            display: flex; align-items: center;
+            padding: 12px 16px;
+            background: #1e2025;
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 10px;
+            border-bottom-left-radius: 3px;
+            max-width: 80px;
+        }
+        .typing-indicator .dots { display: flex; gap: 4px; }
+        .typing-indicator .dot {
+            width: 6px; height: 6px;
+            background: #7c99b8;
+            border-radius: 50%;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-indicator .dot:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+            40% { transform: scale(1); opacity: 1; }
+        }
+
+        .streaming-cursor {
+            display: inline-block; width: 2px; height: 1em;
+            background: #7c99b8;
+            animation: blink 1s infinite;
+            margin-left: 2px; vertical-align: middle;
+        }
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        @media (max-width: 768px) {
+            .chat-container { padding: 16px; }
+            .message-content { max-width: 92%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <a href="/" class="back-btn">← 返回</a>
+            <div class="logo">Chat</div>
+        </div>
+        <div class="scope-info">
+            <span class="scope-badge" id="scopeBadge">-</span>
+            <span class="qa-counter">剩余: <span id="qaRemaining">-</span> 次</span>
+        </div>
+    </div>
+
+    <div class="chat-container">
+        <div class="limit-warning" id="limitWarning">问答次数已用完，无法继续提问</div>
+        <div class="messages" id="messages">
+            <div class="welcome-msg">
+                <h2>向知识库提问</h2>
+                <p>输入你的问题，我会基于知识库中的信息为你回答，并引用相关的知识记录。</p>
+            </div>
+        </div>
+        <div class="input-area">
+            <div class="input-group">
+                <textarea class="chat-input" id="chatInput" placeholder="输入你的问题..." rows="1"></textarea>
+                <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        const TOKEN = new URLSearchParams(window.location.search).get('token');
+        let qaRemaining = -1;
+        let isUnlimited = false;
+
+        async function checkAuth() {
+            if (!TOKEN) { alert('无效的访问链接'); location.href = '/'; return false; }
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/check?token=${encodeURIComponent(TOKEN)}`);
+                const data = await res.json();
+                if (!data.valid || !data.permissions.chat) { alert('Token 无效或没有问答权限'); location.href = '/'; return false; }
+                const scopeLabels = { 'qa_public': '💬 问答服务', 'full': '🔓 全量访问' };
+                document.getElementById('scopeBadge').textContent = scopeLabels[data.scope] || data.scope;
+                if (data.qa_stats) { qaRemaining = data.qa_stats.remaining; isUnlimited = data.qa_stats.unlimited; updateQACounter(); }
+                return true;
+            } catch (e) { console.error('Auth check failed:', e); alert('验证失败'); location.href = '/'; return false; }
+        }
+
+        function updateQACounter() {
+            const el = document.getElementById('qaRemaining');
+            if (isUnlimited) { el.textContent = '无限'; }
+            else {
+                el.textContent = qaRemaining;
+                if (qaRemaining <= 0) {
+                    document.getElementById('limitWarning').classList.add('show');
+                    document.getElementById('sendBtn').disabled = true;
+                    document.getElementById('chatInput').disabled = true;
+                }
+            }
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const btn = document.getElementById('sendBtn');
+            const question = input.value.trim();
+            if (!question) return;
+            if (!isUnlimited && qaRemaining <= 0) return;
+
+            addMessage('user', question);
+            input.value = '';
+            input.style.height = 'auto';
+            btn.disabled = true;
+            btn.textContent = '思考中...';
+
+            const typingEl = showTypingIndicator();
+
+            try {
+                const url = `${API_BASE}/api/ask/stream?q=${encodeURIComponent(question)}&token=${encodeURIComponent(TOKEN)}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Request failed');
+
+                typingEl.remove();
+                const msgEl = createStreamingMessage();
+                const contentEl = msgEl.querySelector('.message-content');
+                let fullText = '';
+                let sourcesCount = 0;
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    for (const line of chunk.split('\n')) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.type === 'meta') {
+                                    sourcesCount = data.sources_count;
+                                    if (!isUnlimited && data.qa_remaining !== undefined) { qaRemaining = data.qa_remaining; updateQACounter(); }
+                                } else if (data.type === 'content') {
+                                    fullText += data.text;
+                                    contentEl.innerHTML = formatText(fullText) + '<span class="streaming-cursor"></span>';
+                                    scrollToBottom();
+                                } else if (data.type === 'done') {
+                                    contentEl.innerHTML = formatText(fullText);
+                                    if (sourcesCount > 0) {
+                                        const metaEl = document.createElement('div');
+                                        metaEl.className = 'message-meta';
+                                        metaEl.textContent = `引用 ${sourcesCount} 条知识`;
+                                        msgEl.appendChild(metaEl);
+                                    }
+                                } else if (data.type === 'error' || data.error) {
+                                    contentEl.textContent = '请求失败: ' + (data.message || '');
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+            } catch (e) { typingEl?.remove(); addMessage('assistant', '请求失败，请重试'); }
+
+            btn.disabled = false;
+            btn.textContent = '发送';
+        }
+
+        function showTypingIndicator() {
+            const messagesEl = document.getElementById('messages');
+            const welcome = messagesEl.querySelector('.welcome-msg');
+            if (welcome) welcome.remove();
+            const el = document.createElement('div');
+            el.className = 'message assistant';
+            el.innerHTML = `<div class="typing-indicator"><div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+            messagesEl.appendChild(el);
+            scrollToBottom();
+            return el;
+        }
+
+        function createStreamingMessage() {
+            const messagesEl = document.getElementById('messages');
+            const el = document.createElement('div');
+            el.className = 'message assistant';
+            el.innerHTML = '<div class="message-content"></div>';
+            messagesEl.appendChild(el);
+            return el;
+        }
+
+        function scrollToBottom() { const m = document.getElementById('messages'); m.scrollTop = m.scrollHeight; }
+
+        function formatText(text) {
+            return text
+                .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+                .replace(/`(.+?)`/g, '<code>$1</code>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function addMessage(role, content) {
+            const messagesEl = document.getElementById('messages');
+            const welcome = messagesEl.querySelector('.welcome-msg');
+            if (welcome) welcome.remove();
+            const msgEl = document.createElement('div');
+            msgEl.className = `message ${role}`;
+            msgEl.innerHTML = `<div class="message-content">${formatText(content)}</div>`;
+            messagesEl.appendChild(msgEl);
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+        }
+
+        document.getElementById('chatInput').addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+
+        document.getElementById('chatInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+        });
+
+        checkAuth();
+    </script>
+</body>
+</html>

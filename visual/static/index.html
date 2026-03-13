@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Visual - 模拟世界</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #17181c;
+            --bg-s: #1e2025;
+            --bg-t: #26282e;
+            --accent: #d4a054;
+            --accent-s: #c48d3f;
+            --accent-text: #e2b96a;
+            --accent-muted: rgba(212, 160, 84, 0.12);
+            --text-1: #e8e4dc;
+            --text-2: #a8a299;
+            --text-3: #6b665e;
+            --border: rgba(255, 255, 255, 0.06);
+            --border-m: rgba(255, 255, 255, 0.1);
+            --teal: #6da89b;
+            --blue: #7c99b8;
+            --purple: #9d8bb8;
+            --rose: #b8868a;
+            --gold: #b8a66e;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', sans-serif;
+            background: var(--bg);
+            color: var(--text-1);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* 背景氛围 */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 70% 50% at 15% 5%, rgba(212, 160, 84, 0.04) 0%, transparent 60%),
+                radial-gradient(ellipse 50% 70% at 85% 95%, rgba(109, 168, 155, 0.03) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        /* Header - 极简 */
+        .header {
+            background: rgba(30, 32, 37, 0.85);
+            backdrop-filter: blur(16px) saturate(1.2);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 36px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .logo {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--accent-text);
+        }
+        .logo span { color: var(--text-1); font-weight: 500; }
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .scope-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+        }
+        .scope-badge.none { background: rgba(255,255,255,0.05); color: var(--text-3); }
+        .scope-badge.qa_public { background: rgba(124,153,184,0.15); color: var(--blue); }
+        .scope-badge.browse_public { background: rgba(157,139,184,0.15); color: var(--purple); }
+        .scope-badge.full { background: rgba(109,168,155,0.15); color: var(--teal); }
+        .expires-info {
+            font-size: 0.78em;
+            color: var(--text-3);
+        }
+        .logout-btn {
+            background: rgba(184,134,138,0.12);
+            color: var(--rose);
+            border: 1px solid rgba(184,134,138,0.2);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover { background: rgba(184,134,138,0.2); }
+
+        /* Main */
+        .main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 36px 60px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Profile Section */
+        .profile-section {
+            display: flex;
+            align-items: flex-start;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--accent-muted);
+            border: 2px solid var(--border-m);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2em;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-info { flex: 1; }
+        .profile-name {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--text-1);
+            margin-bottom: 4px;
+        }
+        .profile-title {
+            font-size: 0.95em;
+            color: var(--accent-text);
+            margin-bottom: 8px;
+        }
+        .profile-bio {
+            font-size: 0.9em;
+            color: var(--text-2);
+            line-height: 1.6;
+        }
+        .profile-edit-btn {
+            background: transparent;
+            border: 1px solid var(--border-m);
+            color: var(--text-3);
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 0.78em;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+        }
+        .profile-edit-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent-text);
+        }
+        
+        /* Edit Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.25s;
+        }
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background: var(--bg-s);
+            border: 1px solid var(--border-m);
+            border-radius: 14px;
+            padding: 28px;
+            width: 90%;
+            max-width: 440px;
+            transform: translateY(20px);
+            transition: transform 0.25s;
+        }
+        .modal-overlay.show .modal-content {
+            transform: translateY(0);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        .modal-header h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 1.2em;
+            color: var(--text-1);
+        }
+        .modal-close {
+            background: transparent;
+            border: none;
+            color: var(--text-3);
+            font-size: 1.4em;
+            cursor: pointer;
+            padding: 4px;
+        }
+        .modal-close:hover { color: var(--text-1); }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 0.78em;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border-m);
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: var(--text-1);
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid var(--border-m);
+            color: var(--text-2);
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .btn-save {
+            background: var(--accent);
+            border: none;
+            color: var(--bg);
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+        .btn-save:hover { background: var(--accent-s); }
+
+        /* Hero - 非对称布局 */
+        .welcome-section {
+            padding: 80px 0 48px;
+            max-width: 640px;
+        }
+        .welcome-title {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 2.8em;
+            font-weight: 700;
+            color: var(--text-1);
+            line-height: 1.15;
+            margin-bottom: 20px;
+            letter-spacing: -0.02em;
+        }
+        .welcome-title em {
+            font-style: normal;
+            color: var(--accent-text);
+        }
+        .welcome-desc {
+            font-size: 1.05em;
+            color: var(--text-2);
+            line-height: 1.7;
+            margin-bottom: 36px;
+        }
+
+        /* 三层架构标签 */
+        .features-list {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--accent-muted);
+            border: 1px solid rgba(212,160,84,0.1);
+            border-radius: 6px;
+            transition: all 0.25s;
+        }
+        .feature-item:hover {
+            border-color: rgba(212,160,84,0.25);
+            transform: translateY(-1px);
+        }
+        .feature-item .icon { font-size: 1em; }
+        .feature-item .text {
+            color: var(--text-2);
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        /* 分隔线 */
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, var(--border-m), transparent 80%);
+            margin: 40px 0;
+        }
+
+        /* Token Input */
+        .token-section {
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 28px;
+            max-width: 480px;
+            margin-bottom: 40px;
+        }
+        .token-section h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: var(--text-1);
+            font-size: 1.05em;
+            margin-bottom: 16px;
+            font-weight: 700;
+        }
+        .token-input-group {
+            display: flex;
+            gap: 8px;
+        }
+        .token-input {
+            flex: 1;
+            background: rgba(0,0,0,0.25);
+            border: 1px solid var(--border-m);
+            border-radius: 6px;
+            padding: 10px 14px;
+            color: var(--text-1);
+            font-size: 0.9em;
+            font-family: 'JetBrains Mono', monospace;
+            transition: border-color 0.2s;
+        }
+        .token-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .token-input::placeholder { color: var(--text-3); }
+        .token-btn {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            border-radius: 6px;
+            padding: 10px 22px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .token-btn:hover {
+            background: var(--accent-s);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 16px rgba(212,160,84,0.2);
+        }
+        .token-btn:disabled {
+            background: var(--bg-t);
+            color: var(--text-3);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .token-error {
+            color: var(--rose);
+            font-size: 0.85em;
+            margin-top: 12px;
+            display: none;
+        }
+        .token-error.show { display: block; }
+
+        /* 权限面板 */
+        .section-label {
+            font-size: 0.72em;
+            font-weight: 600;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 16px;
+        }
+        .permission-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 40px;
+        }
+        .permission-item {
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.25s;
+        }
+        .permission-item.unlocked {
+            border-color: rgba(109,168,155,0.25);
+            background: rgba(109,168,155,0.04);
+        }
+        .permission-icon { font-size: 1.3em; width: 36px; text-align: center; flex-shrink: 0; }
+        .permission-info h4 { color: var(--text-2); font-size: 0.9em; margin-bottom: 3px; }
+        .permission-info p { color: var(--text-3); font-size: 0.8em; }
+        .permission-item.unlocked .permission-info h4 { color: var(--teal); }
+        .permission-status { margin-left: auto; font-size: 1em; }
+
+        /* 功能入口 - 不对称网格 */
+        .view-cards {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 14px;
+            margin-bottom: 40px;
+        }
+        .view-card {
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 24px;
+            text-decoration: none;
+            color: inherit;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        .view-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(212,160,84,0.04) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .view-card:not(.locked):hover::before { opacity: 1; }
+        .view-card.locked {
+            opacity: 0.4;
+            pointer-events: none;
+        }
+        .view-card:not(.locked):hover {
+            border-color: var(--border-m);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        }
+        .view-card .icon {
+            font-size: 1.6em;
+            margin-bottom: 14px;
+        }
+        .view-card h3 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: var(--text-1);
+            font-size: 1.05em;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+        .view-card p {
+            color: var(--text-3);
+            font-size: 0.82em;
+            line-height: 1.5;
+            flex: 1;
+        }
+        .view-card .lock-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            font-size: 0.9em;
+        }
+        .view-card .scope-required {
+            font-size: 0.7em;
+            color: var(--text-3);
+            margin-top: 10px;
+        }
+
+        /* Chat Card - 跨列 */
+        .chat-card {
+            grid-column: span 3;
+            flex-direction: row;
+            align-items: center;
+            gap: 20px;
+            background: linear-gradient(135deg, var(--bg-s) 0%, rgba(124,153,184,0.04) 100%);
+            border-color: rgba(124,153,184,0.12);
+        }
+        .chat-card:not(.locked):hover {
+            border-color: rgba(124,153,184,0.3);
+        }
+        .chat-card .icon { margin-bottom: 0; }
+        .chat-card .card-text { flex: 1; }
+        .chat-card h3 { color: var(--blue); }
+        .qa-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 0.8em;
+            color: var(--text-3);
+        }
+        .qa-stats span { color: var(--blue); font-weight: 500; }
+
+        /* Dashboard */
+        .dashboard-content { display: none; }
+        .dashboard-content.show { display: block; }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 40px;
+        }
+        .stat-card {
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), transparent);
+            opacity: 0.3;
+        }
+        .stat-card h4 {
+            color: var(--text-3);
+            font-size: 0.72em;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 8px;
+        }
+        .stat-card .value {
+            font-family: 'Playfair Display', Georgia, serif;
+            font-size: 2em;
+            font-weight: 700;
+            color: var(--accent-text);
+        }
+
+        /* Loading */
+        .loading { text-align: center; padding: 20px; color: var(--text-3); }
+        .spinner {
+            width: 28px; height: 28px;
+            border: 2px solid var(--border-m);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Token 管理 */
+        .token-management { display: none; margin-top: 20px; }
+        .token-management.show { display: block; }
+
+        .token-create-form {
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .form-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 140px;
+        }
+        .form-group label {
+            display: block;
+            color: var(--text-3);
+            font-size: 0.72em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 6px;
+        }
+        .form-group select, .form-group input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-m);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.25);
+            color: var(--text-1);
+            font-size: 0.85em;
+        }
+        .form-group select:focus, .form-group input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .create-btn {
+            background: var(--accent);
+            color: var(--bg);
+            border: none;
+            padding: 8px 22px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .create-btn:hover {
+            background: var(--accent-s);
+            transform: translateY(-1px);
+        }
+
+        .token-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .token-item {
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .token-item.full { border-left: 2px solid var(--teal); }
+        .token-item.qa_public { border-left: 2px solid var(--blue); }
+        .token-item.browse_public { border-left: 2px solid var(--purple); }
+
+        .token-info { flex: 1; }
+        .token-info .token-id {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--accent-text);
+            font-size: 0.85em;
+        }
+        .token-info .token-meta { font-size: 0.78em; color: var(--text-3); margin-top: 3px; }
+        .token-info .token-note { font-size: 0.82em; color: var(--text-2); margin-top: 3px; }
+        .token-actions { display: flex; gap: 6px; }
+        .token-actions button {
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-2);
+            cursor: pointer;
+            font-size: 0.78em;
+            transition: all 0.2s;
+        }
+        .token-actions button:hover {
+            background: var(--bg-t);
+            color: var(--text-1);
+        }
+        .token-actions .revoke-btn:hover {
+            background: rgba(184,134,138,0.12);
+            border-color: rgba(184,134,138,0.3);
+            color: var(--rose);
+        }
+
+        /* Token URL Modal */
+        .token-url-display {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .token-url-display.show { display: flex; }
+        .token-url-box {
+            background: var(--bg-s);
+            border: 1px solid var(--border-m);
+            border-radius: 10px;
+            padding: 24px;
+            max-width: 560px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+        .token-url-box h4 {
+            font-family: 'Playfair Display', Georgia, serif;
+            color: var(--text-1);
+            margin-bottom: 14px;
+            font-weight: 700;
+        }
+        .token-url-box input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-m);
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            color: var(--accent-text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            margin-bottom: 12px;
+        }
+        .token-url-box input:focus { outline: none; border-color: var(--accent); }
+        .token-url-box p { color: var(--text-3); font-size: 0.82em; margin-bottom: 14px; }
+        .token-url-box button {
+            background: var(--bg-t);
+            color: var(--text-1);
+            border: 1px solid var(--border);
+            padding: 8px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .token-url-box button:hover { background: rgba(255,255,255,0.06); }
+
+        /* 入场动画 */
+        @keyframes fade-up {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-in {
+            animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+        .delay-1 { animation-delay: 0.08s; }
+        .delay-2 { animation-delay: 0.16s; }
+        .delay-3 { animation-delay: 0.24s; }
+        .delay-4 { animation-delay: 0.32s; }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .main { padding: 0 20px 40px; }
+            .welcome-title { font-size: 2em; }
+            .view-cards { grid-template-columns: 1fr; }
+            .chat-card { grid-column: span 1; flex-direction: column; }
+            .chat-card .card-text { width: 100%; }
+            .permission-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .features-list { flex-direction: column; }
+            .form-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">🧠 <span>Brain</span> Visual</div>
+        <div class="auth-status" id="authStatus">
+            <span class="scope-badge none" id="scopeBadge">访客</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- Hero -->
+        <div class="welcome-section animate-in" id="welcomeSection">
+            <!-- Profile -->
+            <div class="profile-section" id="profileSection">
+                <div class="profile-avatar" id="profileAvatar">🧠</div>
+                <div class="profile-info">
+                    <div class="profile-name" id="profileName">加载中...</div>
+                    <div class="profile-title" id="profileTitle"></div>
+                    <div class="profile-bio" id="profileBio"></div>
+                    <button class="profile-edit-btn" id="profileEditBtn" style="display:none" onclick="openEditModal()">✏️ 编辑资料</button>
+                </div>
+            </div>
+            
+            <div class="features-list" id="featuresList">
+                <div class="feature-item">
+                    <div class="icon">📝</div>
+                    <div class="text">事实层</div>
+                </div>
+                <div class="feature-item">
+                    <div class="icon">🕸️</div>
+                    <div class="text">关联层</div>
+                </div>
+                <div class="feature-item">
+                    <div class="icon">📐</div>
+                    <div class="text">抽象层</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Profile Edit Modal -->
+        <div class="modal-overlay" id="editModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>编辑个人资料</h3>
+                    <button class="modal-close" onclick="closeEditModal()">×</button>
+                </div>
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" id="editName" placeholder="你的名字">
+                </div>
+                <div class="form-group">
+                    <label>头衔</label>
+                    <input type="text" id="editTitle" placeholder="一句话介绍">
+                </div>
+                <div class="form-group">
+                    <label>简介</label>
+                    <textarea id="editBio" placeholder="详细介绍..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label>头像 URL（留空使用默认）</label>
+                    <input type="text" id="editAvatar" placeholder="https://...">
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closeEditModal()">取消</button>
+                    <button class="btn-save" onclick="saveProfile()">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Token Input -->
+        <div class="token-section animate-in delay-1" id="tokenSection">
+            <h3>输入访问 Token</h3>
+            <div class="token-input-group">
+                <input type="text" class="token-input" id="tokenInput"
+                       placeholder="粘贴你的 Token..." autocomplete="off">
+                <button class="token-btn" id="tokenBtn" onclick="verifyToken()">验证</button>
+            </div>
+            <div class="token-error" id="tokenError"></div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- 权限 -->
+        <div class="animate-in delay-2">
+            <div class="section-label">当前权限</div>
+            <div class="permission-grid" id="permissionGrid">
+                <div class="permission-item" id="permChat">
+                    <div class="permission-icon">💬</div>
+                    <div class="permission-info">
+                        <h4>Chat 问答</h4>
+                        <p>向知识库提问</p>
+                    </div>
+                    <div class="permission-status">🔒</div>
+                </div>
+                <div class="permission-item" id="permBrowse">
+                    <div class="permission-icon">👁️</div>
+                    <div class="permission-info">
+                        <h4>浏览图谱</h4>
+                        <p>查看知识结构</p>
+                    </div>
+                    <div class="permission-status">🔒</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 功能入口 -->
+        <div class="animate-in delay-3">
+            <div class="section-label">功能入口</div>
+            <div class="view-cards">
+                <a class="view-card locked" id="graphCard" href="javascript:void(0)">
+                    <div class="lock-badge">🔒</div>
+                    <div class="icon">🕸️</div>
+                    <h3>Graph View</h3>
+                    <p>力导向图，探索知识关联</p>
+                    <div class="scope-required">需要浏览权限</div>
+                </a>
+                <a class="view-card locked" id="treeCard" href="javascript:void(0)">
+                    <div class="lock-badge">🔒</div>
+                    <div class="icon">🌳</div>
+                    <h3>Tree View</h3>
+                    <p>抽象层树形，理解规律结构</p>
+                    <div class="scope-required">需要浏览权限</div>
+                </a>
+                <a class="view-card locked" id="timelineCard" href="javascript:void(0)">
+                    <div class="lock-badge">🔒</div>
+                    <div class="icon">📅</div>
+                    <h3>Timeline</h3>
+                    <p>时间轴，回顾知识演变</p>
+                    <div class="scope-required">需要浏览权限</div>
+                </a>
+                <a class="view-card chat-card locked" id="chatCard" href="javascript:void(0)">
+                    <div class="lock-badge">🔒</div>
+                    <div class="icon">💬</div>
+                    <div class="card-text">
+                        <h3>Chat</h3>
+                        <p>向知识库提问，获取基于存储知识的回答</p>
+                        <div class="qa-stats" id="qaStats" style="display:none">
+                            <div>剩余: <span id="qaRemaining">-</span></div>
+                            <div>已用: <span id="qaUsed">-</span></div>
+                        </div>
+                    </div>
+                    <div class="scope-required">需要问答或全量权限</div>
+                </a>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard-content animate-in delay-4" id="dashboardContent">
+            <div class="section-label">知识库概览</div>
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <h4>知识节点</h4>
+                    <div class="value" id="totalFacts">-</div>
+                </div>
+                <div class="stat-card">
+                    <h4>关联边</h4>
+                    <div class="value" id="totalEdges">-</div>
+                </div>
+                <div class="stat-card">
+                    <h4>抽象规律</h4>
+                    <div class="value" id="totalAbstracts">-</div>
+                </div>
+                <div class="stat-card">
+                    <h4>数据范围</h4>
+                    <div class="value" id="dataScope">-</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Token 管理 -->
+        <div class="token-management" id="tokenManagement">
+            <div class="section-label">Token 管理</div>
+            <div class="token-create-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>权限类型</label>
+                        <select id="newTokenScope">
+                            <option value="qa_public">💬 问答服务</option>
+                            <option value="browse_public">👁️ 公开浏览</option>
+                            <option value="full">🔓 全量访问</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>有效期</label>
+                        <select id="newTokenDuration">
+                            <option value="1d">1 天</option>
+                            <option value="7d" selected>7 天</option>
+                            <option value="30d">30 天</option>
+                            <option value="90d">90 天</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>问答次数</label>
+                        <input type="number" id="newTokenQaLimit" placeholder="默认20" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label>备注</label>
+                        <input type="text" id="newTokenNote" placeholder="如：给朋友A">
+                    </div>
+                </div>
+                <button class="create-btn" onclick="createToken()">创建 Token</button>
+            </div>
+            <div class="token-list" id="tokenList">
+                <div class="loading"><div class="spinner"></div>加载中...</div>
+            </div>
+        </div>
+
+        <!-- Token URL Modal -->
+        <div class="token-url-display" id="tokenUrlDisplay" onclick="closeUrlDisplay(event)">
+            <div class="token-url-box" onclick="event.stopPropagation()">
+                <h4>分享链接</h4>
+                <input type="text" id="tokenUrlInput" readonly onclick="this.select()">
+                <p>点击上方链接全选后复制</p>
+                <button onclick="closeUrlDisplay()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        const TokenManager = {
+            KEY: 'brain_token',
+            INFO_KEY: 'brain_token_info',
+            get() { return sessionStorage.getItem(this.KEY); },
+            getInfo() { const i = sessionStorage.getItem(this.INFO_KEY); return i ? JSON.parse(i) : null; },
+            set(token, info) { sessionStorage.setItem(this.KEY, token); sessionStorage.setItem(this.INFO_KEY, JSON.stringify(info)); },
+            clear() { sessionStorage.removeItem(this.KEY); sessionStorage.removeItem(this.INFO_KEY); },
+            getScope() { return this.getInfo()?.scope || 'none'; },
+            canChat() { return ['full', 'qa_public'].includes(this.getScope()); },
+            canBrowse() { return ['full', 'browse_public'].includes(this.getScope()); }
+        };
+
+        async function verifyToken() {
+            const input = document.getElementById('tokenInput');
+            const btn = document.getElementById('tokenBtn');
+            const error = document.getElementById('tokenError');
+            const token = input.value.trim();
+            if (!token) { showError('请输入 Token'); return; }
+
+            btn.disabled = true;
+            btn.textContent = '验证中...';
+            error.classList.remove('show');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/check?token=${encodeURIComponent(token)}`);
+                const data = await res.json();
+                if (data.valid) {
+                    TokenManager.set(token, data);
+                    updateUI(data);
+                    if (location.search.includes('token=')) history.replaceState({}, '', location.pathname);
+                } else {
+                    const msgs = { 'token_expired': 'Token 已过期', 'token_revoked': 'Token 已被撤销', 'token_not_found': 'Token 无效' };
+                    showError(msgs[data.error] || 'Token 验证失败');
+                }
+            } catch (e) { showError('网络错误，请重试'); }
+
+            btn.disabled = false;
+            btn.textContent = '验证';
+        }
+
+        function showError(msg) {
+            const error = document.getElementById('tokenError');
+            error.textContent = msg;
+            error.classList.add('show');
+        }
+
+        function updateUI(authInfo) {
+            const scope = authInfo.scope || 'none';
+            const permissions = authInfo.permissions || {};
+            const scopeBadge = document.getElementById('scopeBadge');
+            const authStatus = document.getElementById('authStatus');
+            const scopeLabels = { 'none': '访客', 'qa_public': '💬 问答服务', 'browse_public': '👁️ 公开浏览', 'full': '🔓 全量访问' };
+
+            scopeBadge.textContent = scopeLabels[scope] || scope;
+            scopeBadge.className = `scope-badge ${scope}`;
+
+            if (authInfo.valid && authInfo.expires_at) {
+                const expiresStr = new Date(authInfo.expires_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                authStatus.innerHTML = `
+                    <span class="scope-badge ${scope}">${scopeLabels[scope]}</span>
+                    <span class="expires-info">有效期至 ${expiresStr}</span>
+                    <button class="logout-btn" onclick="logout()">退出</button>
+                `;
+            }
+
+            updatePermissionItem('permChat', permissions.chat);
+            updatePermissionItem('permBrowse', permissions.browse);
+
+            const token = TokenManager.get();
+
+            const chatCard = document.getElementById('chatCard');
+            if (permissions.chat) {
+                chatCard.classList.remove('locked');
+                chatCard.querySelector('.lock-badge').textContent = '✅';
+                chatCard.href = `/chat.html?token=${token}`;
+                const qaStats = authInfo.qa_stats;
+                if (qaStats && !qaStats.unlimited) {
+                    document.getElementById('qaStats').style.display = 'flex';
+                    document.getElementById('qaRemaining').textContent = qaStats.remaining;
+                    document.getElementById('qaUsed').textContent = qaStats.used;
+                } else if (qaStats?.unlimited) {
+                    document.getElementById('qaStats').style.display = 'flex';
+                    document.getElementById('qaRemaining').textContent = '无限';
+                    document.getElementById('qaUsed').textContent = qaStats.used;
+                }
+            }
+
+            const viewUrls = { 'graphCard': '/graph', 'treeCard': '/tree', 'timelineCard': '/timeline' };
+            ['graphCard', 'treeCard', 'timelineCard'].forEach(id => {
+                const card = document.getElementById(id);
+                if (permissions.browse) {
+                    card.classList.remove('locked');
+                    card.querySelector('.lock-badge').textContent = '✅';
+                    card.href = `${viewUrls[id]}?token=${token}`;
+                }
+            });
+
+            if (permissions.browse) {
+                document.getElementById('dashboardContent').classList.add('show');
+                loadDashboardData(token, permissions.full_access);
+            }
+            if (permissions.full_access) {
+                document.getElementById('tokenManagement').classList.add('show');
+                document.getElementById('profileEditBtn').style.display = 'inline-block';
+                loadTokenList();
+            }
+            if (authInfo.valid) document.getElementById('tokenSection').style.display = 'none';
+        }
+
+        function updatePermissionItem(id, unlocked) {
+            const item = document.getElementById(id);
+            const status = item.querySelector('.permission-status');
+            if (unlocked) { item.classList.add('unlocked'); status.textContent = '✅'; }
+            else { item.classList.remove('unlocked'); status.textContent = '🔒'; }
+        }
+
+        async function loadDashboardData(token, isFullAccess) {
+            try {
+                const [stats, tree] = await Promise.all([
+                    fetch(`${API_BASE}/api/visual/stats?token=${token}`).then(r => r.json()),
+                    fetch(`${API_BASE}/api/visual/tree?token=${token}`).then(r => r.json())
+                ]);
+                document.getElementById('totalFacts').textContent = stats.total_facts || 0;
+                document.getElementById('totalEdges').textContent = stats.graph_edges || 0;
+                document.getElementById('totalAbstracts').textContent = tree.abstracts?.length || 0;
+                document.getElementById('dataScope').textContent = isFullAccess ? '全量' : '公开';
+            } catch (e) { console.error('Failed to load dashboard:', e); }
+        }
+
+        function logout() { TokenManager.clear(); location.reload(); }
+
+        // Profile functions
+        async function loadProfile() {
+            try {
+                const res = await fetch(`${API_BASE}/api/public/profile`);
+                const profile = await res.json();
+                
+                document.getElementById('profileName').textContent = profile.name || '未设置';
+                document.getElementById('profileTitle').textContent = profile.title || '';
+                document.getElementById('profileBio').textContent = profile.bio || '';
+                
+                const avatarEl = document.getElementById('profileAvatar');
+                if (profile.avatar) {
+                    avatarEl.innerHTML = `<img src="${profile.avatar}" alt="avatar" onerror="this.parentElement.innerHTML='🧠'">`;
+                } else {
+                    avatarEl.innerHTML = '🧠';
+                }
+            } catch (e) {
+                console.error('Failed to load profile:', e);
+            }
+        }
+        
+        function openEditModal() {
+            const modal = document.getElementById('editModal');
+            document.getElementById('editName').value = document.getElementById('profileName').textContent || '';
+            document.getElementById('editTitle').value = document.getElementById('profileTitle').textContent || '';
+            document.getElementById('editBio').value = document.getElementById('profileBio').textContent || '';
+            const avatarEl = document.getElementById('profileAvatar');
+            const avatarImg = avatarEl.querySelector('img');
+            document.getElementById('editAvatar').value = avatarImg ? avatarImg.src : '';
+            modal.classList.add('show');
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+        }
+        
+        async function saveProfile() {
+            const token = TokenManager.get();
+            if (!token) { alert('请先登录'); return; }
+            
+            const data = {
+                name: document.getElementById('editName').value.trim(),
+                title: document.getElementById('editTitle').value.trim(),
+                bio: document.getElementById('editBio').value.trim(),
+                avatar: document.getElementById('editAvatar').value.trim()
+            };
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/profile?token=${token}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    closeEditModal();
+                    loadProfile();
+                } else {
+                    alert('保存失败: ' + (result.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('保存失败，请重试');
+            }
+        }
+        
+        // Close modal on outside click
+        document.getElementById('editModal').addEventListener('click', function(e) {
+            if (e.target === this) closeEditModal();
+        });
+
+        async function init() {
+            // Load public profile first
+            await loadProfile();
+            
+            const urlToken = new URLSearchParams(window.location.search).get('token');
+            if (urlToken) { document.getElementById('tokenInput').value = urlToken; await verifyToken(); return; }
+            const savedToken = TokenManager.get();
+            if (savedToken) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/check?token=${encodeURIComponent(savedToken)}`);
+                    const data = await res.json();
+                    if (data.valid) { TokenManager.set(savedToken, data); updateUI(data); }
+                    else { TokenManager.clear(); }
+                } catch (e) { console.error('Token validation failed:', e); }
+            }
+        }
+
+        document.getElementById('tokenInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyToken(); });
+
+        // Token 管理
+        async function loadTokenList() {
+            const token = TokenManager.get();
+            try {
+                const res = await fetch(`${API_BASE}/api/tokens?token=${token}`);
+                const data = await res.json();
+                renderTokenList(data.tokens || []);
+            } catch (e) { document.getElementById('tokenList').innerHTML = '<div style="color:var(--rose)">加载失败</div>'; }
+        }
+
+        function renderTokenList(tokens) {
+            if (tokens.length === 0) {
+                document.getElementById('tokenList').innerHTML = '<div style="color:var(--text-3);text-align:center;padding:20px">暂无 Token</div>';
+                return;
+            }
+            document.getElementById('tokenList').innerHTML = tokens.map(t => {
+                const expiresStr = new Date(t.expires_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                const qaStr = t.qa_unlimited ? '无限' : `${t.qa_used}/${t.qa_limit}`;
+                return `
+                    <div class="token-item ${t.scope}">
+                        <div class="token-info">
+                            <div class="token-id">${t.token_short} <span style="color:var(--text-3)">${t.scope_label}</span></div>
+                            <div class="token-meta">过期: ${expiresStr} · 访问: ${t.access_count}次 · 问答: ${qaStr}</div>
+                            ${t.note ? `<div class="token-note">📝 ${t.note}</div>` : ''}
+                        </div>
+                        <div class="token-actions">
+                            <button onclick="copyTokenUrl('${t.url}')">📋 复制链接</button>
+                            <button class="revoke-btn" onclick="revokeToken('${t.token_short.replace('...', '')}')">撤销</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function createToken() {
+            const token = TokenManager.get();
+            const scope = document.getElementById('newTokenScope').value;
+            const duration = document.getElementById('newTokenDuration').value;
+            const qaLimitInput = document.getElementById('newTokenQaLimit').value;
+            const note = document.getElementById('newTokenNote').value;
+            const qaLimit = qaLimitInput ? parseInt(qaLimitInput) : null;
+            try {
+                const res = await fetch(`${API_BASE}/api/tokens?token=${token}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scope, duration, qa_limit: qaLimit, note })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('newTokenNote').value = '';
+                    document.getElementById('newTokenQaLimit').value = '';
+                    loadTokenList();
+                    copyTokenUrl(data.url);
+                } else { alert('创建失败: ' + (data.detail || '未知错误')); }
+            } catch (e) { alert('创建失败，请重试'); }
+        }
+
+        async function revokeToken(tokenId) {
+            if (!confirm('确定撤销此 Token？撤销后无法恢复。')) return;
+            const token = TokenManager.get();
+            try {
+                const res = await fetch(`${API_BASE}/api/tokens/${tokenId}?token=${token}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) loadTokenList();
+            } catch (e) { alert('撤销失败，请重试'); }
+        }
+
+        function copyTokenUrl(url) {
+            const display = document.getElementById('tokenUrlDisplay');
+            const input = document.getElementById('tokenUrlInput');
+            input.value = url;
+            display.classList.add('show');
+            setTimeout(() => { input.select(); input.setSelectionRange(0, 99999); }, 100);
+        }
+
+        function closeUrlDisplay(event) {
+            if (event && event.target !== event.currentTarget) return;
+            document.getElementById('tokenUrlDisplay').classList.remove('show');
+        }
+
+        init();
+    </script>
+</body>
+</html>

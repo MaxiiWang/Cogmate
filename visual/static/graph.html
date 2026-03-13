@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Visual - Graph View</title>
+    <link rel="stylesheet" href="/css/theme.css">
+    <style>
+        #graph { width: 100vw; height: 100vh; }
+
+        .search-box {
+            position: fixed;
+            top: 72px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 80;
+        }
+        .search-box input {
+            width: 300px;
+            padding: 10px 20px;
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-pill);
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            color: var(--text-primary);
+            font-size: 0.85em;
+            outline: none;
+            transition: all var(--transition-fast);
+            box-shadow: var(--shadow-sm);
+        }
+        .search-box input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-muted), var(--shadow-md);
+            width: 360px;
+        }
+        .search-box input::placeholder { color: var(--text-muted); }
+
+        .filter-panel {
+            position: fixed;
+            top: 72px;
+            left: var(--space-lg);
+            background: var(--bg-card);
+            backdrop-filter: blur(16px) saturate(1.2);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: var(--space-md);
+            z-index: 80;
+            box-shadow: var(--shadow-md), var(--shadow-inset);
+        }
+
+        .legend {
+            position: fixed;
+            bottom: var(--space-lg);
+            left: var(--space-lg);
+            background: var(--bg-card);
+            backdrop-filter: blur(16px) saturate(1.2);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-lg);
+            padding: var(--space-md);
+            z-index: 80;
+            box-shadow: var(--shadow-md), var(--shadow-inset);
+        }
+
+        .controls {
+            position: fixed;
+            bottom: var(--space-lg);
+            right: var(--space-lg);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            z-index: 80;
+        }
+        .control-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all var(--transition-fast);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .control-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-text);
+            background: var(--accent-muted);
+        }
+
+        .node-label {
+            font-size: 10px;
+            fill: var(--text-secondary);
+            pointer-events: none;
+            font-family: var(--font-sans);
+        }
+
+        .tooltip {
+            position: fixed;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--text-primary);
+            font-size: 12px;
+            max-width: 280px;
+            pointer-events: none;
+            z-index: 200;
+            box-shadow: var(--shadow-lg);
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">加载知识图谱...</div>
+    </div>
+
+    <div class="top-bar">
+        <a href="/" class="logo" style="text-decoration:none">🧠 <span>Brain</span> Visual</a>
+        <div class="nav-tabs">
+            <a class="nav-tab active" href="#">🕸️ Graph</a>
+            <a class="nav-tab" id="treeLink" href="#">🌳 Tree</a>
+            <a class="nav-tab" id="timelineLink" href="#">📅 Timeline</a>
+        </div>
+        <div class="stats-bar">
+            <div class="stat">节点 <span class="num" id="nodeCount">-</span></div>
+            <div class="stat">边 <span class="num" id="edgeCount">-</span></div>
+            <div class="stat">矛盾 <span class="num" id="conflictCount">-</span></div>
+        </div>
+    </div>
+
+    <div class="search-box">
+        <input type="text" id="searchInput" placeholder="搜索节点..." oninput="searchNodes(this.value)">
+    </div>
+
+    <div class="filter-panel">
+        <div class="panel-title">节点类型</div>
+        <label class="filter-item"><input type="checkbox" checked data-type="事件"> 事件</label>
+        <label class="filter-item"><input type="checkbox" checked data-type="观点"> 观点</label>
+        <label class="filter-item"><input type="checkbox" checked data-type="情绪"> 情绪</label>
+        <label class="filter-item"><input type="checkbox" checked data-type="资讯"> 资讯</label>
+        <label class="filter-item"><input type="checkbox" checked data-type="决策"> 决策</label>
+        <div style="border-top:1px solid var(--border-subtle);margin-top:8px;padding-top:8px">
+            <label class="filter-item"><input type="checkbox" id="showAllLabels" onchange="toggleLabels()"> 显示标签</label>
+        </div>
+    </div>
+
+    <div class="legend">
+        <div class="panel-title">图例</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--color-事件);color:var(--color-事件)"></div> 事件</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--color-观点);color:var(--color-观点)"></div> 观点</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--color-情绪);color:var(--color-情绪)"></div> 情绪</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--color-资讯);color:var(--color-资讯)"></div> 资讯</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--color-决策);color:var(--color-决策)"></div> 决策</div>
+        <div class="legend-item" style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border-subtle)">
+            <div style="width:18px;height:2px;background:var(--rel-矛盾)"></div> 矛盾
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="control-btn" onclick="zoomIn()" title="放大">+</button>
+        <button class="control-btn" onclick="zoomOut()" title="缩小">−</button>
+        <button class="control-btn" onclick="resetZoom()" title="重置">⟲</button>
+    </div>
+
+    <div class="detail-panel" id="detailPanel">
+        <div class="panel-header">
+            <h3>节点详情</h3>
+            <button class="panel-close" onclick="closePanel()">×</button>
+        </div>
+        <div class="panel-content" id="panelContent"></div>
+    </div>
+
+    <svg id="graph"></svg>
+
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script>
+        const API_BASE = window.location.origin;
+        const params = new URLSearchParams(window.location.search);
+        const TOKEN = params.get('token');
+        const FOCUS_ID = params.get('focus');
+        let isFullAccess = false;
+
+        const TYPE_COLORS = {
+            '事件': '#7c99b8',
+            '观点': '#6da89b',
+            '情绪': '#b8868a',
+            '资讯': '#9d8bb8',
+            '决策': '#b8a66e',
+            'default': '#808690'
+        };
+
+        async function checkAuth() {
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/check?token=${TOKEN}`);
+                const data = await res.json();
+                isFullAccess = data.permissions?.full_access || false;
+            } catch (e) { console.error('Auth check failed:', e); }
+        }
+
+        document.querySelector('.logo').href = '/?token=' + TOKEN;
+        document.getElementById('treeLink').href = `/tree?token=${TOKEN}`;
+        document.getElementById('timelineLink').href = `/timeline?token=${TOKEN}`;
+
+        let graphData = { nodes: [], edges: [] };
+        let simulation, svg, g, link, node, labels;
+        let visibleTypes = new Set(['事件', '观点', '情绪', '资讯', '决策']);
+        let selectedNode = null;
+        let zoom;
+
+        async function api(endpoint) {
+            const res = await fetch(`${API_BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${TOKEN}`);
+            if (!res.ok) throw new Error('API Error');
+            return res.json();
+        }
+
+        function initGraph() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+
+            svg = d3.select('#graph').attr('width', width).attr('height', height);
+
+            zoom = d3.zoom()
+                .scaleExtent([0.2, 4])
+                .on('zoom', (event) => { g.attr('transform', event.transform); });
+
+            svg.call(zoom);
+            g = svg.append('g');
+
+            svg.append('defs').append('marker')
+                .attr('id', 'arrowhead')
+                .attr('viewBox', '-0 -5 10 10')
+                .attr('refX', 20).attr('refY', 0)
+                .attr('orient', 'auto')
+                .attr('markerWidth', 5).attr('markerHeight', 5)
+                .append('path')
+                .attr('d', 'M 0,-5 L 10,0 L 0,5')
+                .attr('fill', '#3a3e46');
+
+            simulation = d3.forceSimulation()
+                .force('link', d3.forceLink().id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide().radius(d => getNodeRadius(d) + 5));
+        }
+
+        function getNodeRadius(d) { return 7 + Math.min(d.degree || 1, 8) * 1.8; }
+        function getNodeColor(d) { return TYPE_COLORS[d.type] || TYPE_COLORS.default; }
+
+        function renderGraph() {
+            const nodes = graphData.nodes.filter(n => visibleTypes.has(n.type) || !n.type);
+            const nodeIds = new Set(nodes.map(n => n.id));
+            const links = graphData.edges
+                .filter(e => nodeIds.has(e.source.id || e.source) && nodeIds.has(e.target.id || e.target))
+                .map(e => ({ source: e.source.id || e.source, target: e.target.id || e.target, type: e.type, confidence: e.confidence }));
+
+            document.getElementById('nodeCount').textContent = nodes.length;
+            document.getElementById('edgeCount').textContent = links.length;
+            document.getElementById('conflictCount').textContent = links.filter(l => l.type === '矛盾').length;
+
+            g.selectAll('*').remove();
+
+            link = g.append('g').selectAll('line').data(links).join('line')
+                .attr('stroke', d => d.type === '矛盾' ? '#b8868a' : '#2e3038')
+                .attr('stroke-width', d => d.type === '矛盾' ? 1.5 : 0.8)
+                .attr('stroke-opacity', d => d.type === '矛盾' ? 0.7 : 0.4)
+                .attr('marker-end', 'url(#arrowhead)');
+
+            node = g.append('g').selectAll('circle').data(nodes).join('circle')
+                .attr('r', d => getNodeRadius(d))
+                .attr('fill', d => getNodeColor(d))
+                .attr('stroke', d => getNodeColor(d))
+                .attr('stroke-width', 1.5)
+                .attr('stroke-opacity', 0.25)
+                .attr('cursor', 'pointer')
+                .attr('filter', 'url(#glow)')
+                .call(d3.drag().on('start', dragstarted).on('drag', dragged).on('end', dragended))
+                .on('click', (event, d) => showNodeDetail(d))
+                .on('mouseover', function(event, d) {
+                    d3.select(this).attr('stroke-opacity', 0.7).attr('stroke-width', 3);
+                    showTooltip(event, d);
+                })
+                .on('mouseout', function() {
+                    d3.select(this).attr('stroke-opacity', 0.25).attr('stroke-width', 1.5);
+                    hideTooltip();
+                });
+
+            const defs = svg.select('defs');
+            if (!defs.select('#glow').node()) {
+                const filter = defs.append('filter').attr('id', 'glow').attr('x', '-50%').attr('y', '-50%').attr('width', '200%').attr('height', '200%');
+                filter.append('feGaussianBlur').attr('stdDeviation', '2').attr('result', 'coloredBlur');
+                const feMerge = filter.append('feMerge');
+                feMerge.append('feMergeNode').attr('in', 'coloredBlur');
+                feMerge.append('feMergeNode').attr('in', 'SourceGraphic');
+            }
+
+            const showAll = document.getElementById('showAllLabels')?.checked;
+            const labelNodes = showAll ? nodes : nodes.filter(n => n.degree >= 3);
+
+            labels = g.append('g').selectAll('text').data(labelNodes).join('text')
+                .attr('class', 'node-label')
+                .attr('text-anchor', 'middle')
+                .attr('dy', d => getNodeRadius(d) + 14)
+                .text(d => d.label.slice(0, 12) + (d.label.length > 12 ? '...' : ''));
+
+            simulation.nodes(nodes);
+            simulation.force('link').links(links);
+            simulation.alpha(1).restart();
+
+            simulation.on('tick', () => {
+                link.attr('x1', d => d.source.x).attr('y1', d => d.source.y).attr('x2', d => d.target.x).attr('y2', d => d.target.y);
+                node.attr('cx', d => d.x).attr('cy', d => d.y);
+                labels.attr('x', d => d.x).attr('y', d => d.y);
+            });
+        }
+
+        function dragstarted(event) { if (!event.active) simulation.alphaTarget(0.3).restart(); event.subject.fx = event.subject.x; event.subject.fy = event.subject.y; }
+        function dragged(event) { event.subject.fx = event.x; event.subject.fy = event.y; }
+        function dragended(event) { if (!event.active) simulation.alphaTarget(0); event.subject.fx = null; event.subject.fy = null; }
+
+        let tooltip;
+        function showTooltip(event, d) {
+            if (!tooltip) tooltip = d3.select('body').append('div').attr('class', 'tooltip');
+            tooltip.style('display', 'block')
+                .style('left', (event.clientX + 12) + 'px').style('top', (event.clientY + 12) + 'px')
+                .html(`<strong style="color:${getNodeColor(d)}">[${d.type || '未知'}]</strong><br>${d.label}`);
+        }
+        function hideTooltip() { if (tooltip) tooltip.style('display', 'none'); }
+
+        async function showNodeDetail(d) {
+            selectedNode = d;
+            node.attr('stroke-width', n => n.id === d.id ? 3 : 1.5).attr('stroke-opacity', n => n.id === d.id ? 0.7 : 0.25);
+            const relatedEdges = graphData.edges.filter(e => (e.source.id || e.source) === d.id || (e.target.id || e.target) === d.id);
+
+            let privacyHtml = '';
+            if (isFullAccess) {
+                try {
+                    const privacyRes = await fetch(`${API_BASE}/api/visual/privacy/${d.id}?token=${TOKEN}`);
+                    const privacyData = await privacyRes.json();
+                    const isPrivate = privacyData.is_private;
+                    privacyHtml = `
+                        <div class="detail-section">
+                            <h4>隐私设置</h4>
+                            <div class="privacy-toggle">
+                                <button class="privacy-btn ${!isPrivate ? 'active' : ''}" onclick="togglePrivacy('${d.id}', false)">🌐 公开</button>
+                                <button class="privacy-btn ${isPrivate ? 'active' : ''}" onclick="togglePrivacy('${d.id}', true)">🔒 私有</button>
+                            </div>
+                        </div>`;
+                } catch (e) { console.error('Privacy check failed:', e); }
+            }
+
+            document.getElementById('panelContent').innerHTML = `
+                <div class="detail-section"><h4>类型</h4><span class="type-badge ${d.type || ''}">${d.type || '未知'}</span></div>
+                <div class="detail-section"><h4>内容</h4><p style="white-space:pre-wrap;word-break:break-word">${d.full_content || d.label}</p></div>
+                <div class="detail-section"><h4>元数据</h4><p style="font-size:0.85em;color:var(--text-muted)">ID: ${d.id.slice(0, 8)}<br>时间: ${d.timestamp || '未知'}<br>连接度: ${d.degree || 0}</p></div>
+                ${privacyHtml}
+                ${relatedEdges.length > 0 ? `
+                <div class="detail-section"><h4>关联 (${relatedEdges.length})</h4>
+                    ${relatedEdges.map(e => {
+                        const otherId = (e.source.id || e.source) === d.id ? (e.target.id || e.target) : (e.source.id || e.source);
+                        const otherNode = graphData.nodes.find(n => n.id === otherId);
+                        const relType = e.type || 'RELATES_TO';
+                        return `<div class="relation-item ${relType}" onclick="focusNode('${otherId}')">
+                            <div class="relation-type">${relType} · 置信度 ${e.confidence || '?'}</div>
+                            <div class="relation-content">${otherNode?.label || otherId.slice(0,8)}</div>
+                        </div>`;
+                    }).join('')}
+                </div>` : ''}`;
+
+            document.getElementById('detailPanel').classList.add('open');
+        }
+
+        async function togglePrivacy(entityId, setPrivate) {
+            try {
+                const res = await fetch(`${API_BASE}/api/visual/privacy?token=${TOKEN}`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entity_id: entityId, is_private: setPrivate, cascade: false })
+                });
+                const data = await res.json();
+                if (data.success) showNodeDetail(selectedNode);
+            } catch (e) { console.error('Toggle privacy failed:', e); }
+        }
+
+        function closePanel() { document.getElementById('detailPanel').classList.remove('open'); node.attr('stroke-width', 1.5).attr('stroke-opacity', 0.25); selectedNode = null; }
+
+        function focusNode(id) {
+            // Support both full ID and short ID (prefix match)
+            const n = graphData.nodes.find(n => n.id === id || n.id.startsWith(id));
+            if (n) {
+                showNodeDetail(n);
+                svg.transition().duration(500).call(zoom.transform,
+                    d3.zoomIdentity.translate(window.innerWidth / 2, window.innerHeight / 2).scale(1.5).translate(-n.x, -n.y));
+            }
+        }
+
+        function searchNodes(query) {
+            if (!query) { node.attr('opacity', 1); return; }
+            query = query.toLowerCase();
+            node.attr('opacity', d => d.label.toLowerCase().includes(query) ? 1 : 0.12);
+        }
+
+        document.querySelectorAll('.filter-item input[data-type]').forEach(input => {
+            input.addEventListener('change', () => {
+                if (input.checked) visibleTypes.add(input.dataset.type); else visibleTypes.delete(input.dataset.type);
+                renderGraph();
+            });
+        });
+
+        function toggleLabels() { renderGraph(); }
+        function zoomIn() { svg.transition().call(zoom.scaleBy, 1.5); }
+        function zoomOut() { svg.transition().call(zoom.scaleBy, 0.67); }
+        function resetZoom() { svg.transition().call(zoom.transform, d3.zoomIdentity.translate(window.innerWidth / 2, window.innerHeight / 2).scale(0.8)); }
+
+        window.addEventListener('resize', () => {
+            svg.attr('width', window.innerWidth).attr('height', window.innerHeight);
+            simulation.force('center', d3.forceCenter(window.innerWidth / 2, window.innerHeight / 2));
+            simulation.alpha(0.3).restart();
+        });
+
+        async function init() {
+            try {
+                await checkAuth();
+                const data = await api('/api/visual/graph');
+                graphData = data;
+                initGraph();
+                renderGraph();
+                document.getElementById('loading').style.display = 'none';
+                
+                // Auto-focus if focus parameter provided
+                if (FOCUS_ID) {
+                    // Wait for simulation to stabilize a bit
+                    setTimeout(() => focusNode(FOCUS_ID), 800);
+                }
+            } catch (e) {
+                document.getElementById('loading').innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">加载失败: ${e.message}</div></div>`;
+            }
+        }
+
+        init();
+    </script>
+    <script src="/js/chat.js"></script>
+</body>
+</html>

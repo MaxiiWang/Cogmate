@@ -1,0 +1,44 @@
+# Brain Agent Dependencies
+
+# ===== 核心依赖 =====
+
+# 向量数据库
+qdrant-client>=1.7.0
+
+# 图数据库
+neo4j>=5.0.0
+
+# 向量模型
+sentence-transformers>=2.2.0
+torch>=2.0.0
+
+# 数值计算
+numpy>=1.24.0
+
+# ===== API 服务（可视化用）=====
+
+fastapi>=0.100.0
+uvicorn>=0.22.0
+python-multipart>=0.0.6
+
+# ===== HTTP 客户端 =====
+
+httpx>=0.24.0
+
+# ===== 工具 =====
+
+# 环境变量
+python-dotenv>=1.0.0
+
+# CLI 彩色输出
+colorama>=0.4.0
+
+# ===== LLM（可选）=====
+
+anthropic>=0.18.0
+
+# ===== 开发依赖（可选）=====
+
+# pytest>=7.0.0
+# black>=23.0.0
+# mypy>=1.0.0

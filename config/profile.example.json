@@ -1,0 +1,15 @@
+{
+  "name": "Your Name",
+  "title": "知识探索者",
+  "bio": "我的个人知识管理系统，将碎片化想法持久化并发现知识间的隐藏关联。",
+  "avatar": "",
+  "timezone": "Asia/Shanghai",
+  "preferences": {
+    "default_content_type": "观点",
+    "default_emotion": "中性",
+    "auto_discover_relations": true,
+    "challenge_detection": true,
+    "daily_report_time": "20:00",
+    "weekly_report_day": "sunday"
+  }
+}
