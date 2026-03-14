@@ -27,7 +27,7 @@ _创建日期: 2026-03-11_
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                   brain-visual                       │
+│                   cogmate-visual                       │
 │  (React SPA + Three.js + D3.js)                     │
 ├─────────────────────────────────────────────────────┤
 │                    Nginx / Vercel                    │
@@ -38,7 +38,7 @@ _创建日期: 2026-03-11_
 │  /api/visual/timeline                                │
 │  /api/visual/search                                  │
 ├─────────────────────────────────────────────────────┤
-│                 Brain Agent Core                     │
+│                 Cogmate Core                     │
 │  (Python + SQLite + Qdrant + Neo4j)                 │
 └─────────────────────────────────────────────────────┘
 ```
@@ -53,21 +53,21 @@ _创建日期: 2026-03-11_
 | 状态管理 | Zustand | 轻量、简洁 |
 | 样式 | Tailwind CSS | 快速开发 |
 | 构建工具 | Vite | 快速、现代 |
-| API 服务 | FastAPI (Python) | 与 Brain Agent 同语言 |
+| API 服务 | FastAPI (Python) | 与 Cogmate 同语言 |
 
 ### 2.3 部署方案
 
 **方案 A: 本地 Docker（推荐初期）**
 ```yaml
 services:
-  brain-visual:
+  cogmate-visual:
     build: .
     ports:
       - "3000:3000"
     environment:
       - API_BASE_URL=http://localhost:8000
   
-  brain-api:
+  cogmate-api:
     build: ./api
     ports:
       - "8000:8000"
@@ -248,7 +248,7 @@ POST /api/visual/action
 
 | 任务 | 时间 |
 |------|------|
-| 初始化 brain-visual 仓库 | 0.5天 |
+| 初始化 cogmate-visual 仓库 | 0.5天 |
 | FastAPI 后端骨架 | 0.5天 |
 | **Token 机制实现** | 1天 |
 | - visual_tokens 表 | |
@@ -315,7 +315,7 @@ POST /api/visual/action
 ## 6. 文件结构
 
 ```
-brain-visual/
+cogmate-visual/
 ├── api/                    # FastAPI 后端
 │   ├── main.py
 │   ├── routers/

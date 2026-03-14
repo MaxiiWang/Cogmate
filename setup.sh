@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# Brain Agent 一键安装脚本
+# Cogmate 一键安装脚本
 # 用法: chmod +x setup.sh && ./setup.sh
 
 set -e
 
-echo "🧠 Brain Agent 安装脚本"
+echo "🧠 Cogmate 安装脚本"
 echo "========================"
 echo ""
 
@@ -128,16 +128,16 @@ echo "🔍 步骤 6/6: 验证安装..."
 mkdir -p data logs
 
 # 运行验证
-./brain stats
+./cogmate stats
 
 echo ""
 echo "========================"
 echo -e "${GREEN}🎉 安装完成！${NC}"
 echo ""
 echo "快速开始:"
-echo "  ./brain store \"你的第一条知识\""
-echo "  ./brain query \"检索关键词\""
-echo "  ./brain stats"
+echo "  ./cogmate store \"你的第一条知识\""
+echo "  ./cogmate query \"检索关键词\""
+echo "  ./cogmate stats"
 echo ""
 echo "文档:"
 echo "  README.md  - 快速入门"

@@ -18,7 +18,7 @@ Intent Handler - 意图处理层
 
 import re
 from typing import Dict, Any, Optional, Tuple, List
-from brain_core import BrainAgent
+from cogmate_core import CogmateAgent
 
 
 class IntentHandler:
@@ -51,7 +51,7 @@ class IntentHandler:
     ]
     
     def __init__(self):
-        self.brain = BrainAgent()
+        self.cogmate = CogmateAgent()
     
     def classify_intent(self, text: str) -> Tuple[str, float]:
         """
@@ -138,7 +138,7 @@ class IntentHandler:
         
         💡 知识库结果有限，需要搜索外部资料吗？（如结果不足）
         """
-        results = self.brain.query(query_text, top_k=top_k, min_score=0.5)
+        results = self.cogmate.query(query_text, top_k=top_k, min_score=0.5)
         
         lines = [f"🔍 「{query_text}」\n"]
         
@@ -257,7 +257,7 @@ class IntentHandler:
             emotion_tag = self._infer_emotion(content)
         
         # 存储
-        fact_id = self.brain.store(
+        fact_id = self.cogmate.store(
             content=content,
             content_type=content_type,
             emotion_tag=emotion_tag,
@@ -271,7 +271,7 @@ class IntentHandler:
         lines.append(f"   [{short_id}] {content_type} | {emotion_tag}")
         
         # 查找关联候选
-        similar = self.brain.find_similar(fact_id, top_k=3)
+        similar = self.cogmate.find_similar(fact_id, top_k=3)
         high_similar = [s for s in similar if s["score"] > 0.7]
         
         if high_similar:
@@ -288,7 +288,7 @@ class IntentHandler:
         处理 AMBIGUOUS 意图
         先检索，有结果则呈现，无结果则引导存储
         """
-        results = self.brain.query(text, top_k=3, min_score=0.5)
+        results = self.cogmate.query(text, top_k=3, min_score=0.5)
         
         if results["total"] > 0:
             # 有结果，按 QUERY 处理，但追加存储提示

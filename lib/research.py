@@ -298,7 +298,7 @@ def generate_summary(content: str) -> str:
     return llm_analyze(content, prompt)
 
 
-def research_url(url: str, deep: bool = True) -> ResearchReport:
+def research_url(url: str, deep: bool = True, raw: bool = False) -> ResearchReport:
     """
     研究单个 URL
     
@@ -336,6 +336,17 @@ def research_url(url: str, deep: bool = True) -> ResearchReport:
                 all_content += f"\n\n--- {suburl} ---\n{sub_content}"
                 pages_analyzed += 1
     
+    # raw 模式跳过 LLM 分析
+    if raw:
+        return ResearchReport(
+            title=title,
+            url=url,
+            summary="[RAW MODE - 由 Agent 分析]",
+            findings=[],
+            raw_content=all_content[:10000],
+            pages_analyzed=pages_analyzed
+        )
+    
     # 生成摘要
     summary = generate_summary(all_content)
     
@@ -356,7 +367,7 @@ def research_url(url: str, deep: bool = True) -> ResearchReport:
     )
 
 
-def research_topic(topic: str) -> ResearchReport:
+def research_topic(topic: str, raw: bool = False) -> ResearchReport:
     """
     研究主题（通过搜索）
     
@@ -401,6 +412,17 @@ def research_topic(topic: str) -> ResearchReport:
                 url="",
                 summary="搜索结果无法提取内容",
                 raw_content=""
+            )
+        
+        # raw 模式跳过 LLM 分析
+        if raw:
+            return ResearchReport(
+                title=f"主题研究: {topic}",
+                url=", ".join(urls_analyzed),
+                summary="[RAW MODE - 由 Agent 分析]",
+                findings=[],
+                raw_content=all_content[:10000],
+                pages_analyzed=len(urls_analyzed)
             )
         
         # 生成摘要

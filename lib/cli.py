@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
 """
-Brain Agent CLI - 简化命令行接口
+Cogmate CLI - 简化命令行接口
 ================================
 
 快速操作:
     # 自动处理（推荐）
-    brain process "我之前对MES系统的判断是什么？"
-    brain process "今天客户说系统太难用了"
+    cogmate process "我之前对MES系统的判断是什么？"
+    cogmate process "今天客户说系统太难用了"
     
     # 存储（自动识别类型）
-    brain store "今天客户说系统太难用了"
-    brain store "决定暂缓投资黄金" --type 决策
+    cogmate store "今天客户说系统太难用了"
+    cogmate store "决定暂缓投资黄金" --type 决策
     
     # 检索
-    brain query "客户反馈"
-    brain query "投资决策" --top 10
+    cogmate query "客户反馈"
+    cogmate query "投资决策" --top 10
     
     # 状态
-    brain stats
-    brain list
+    cogmate stats
+    cogmate list
     
     # 关联
-    brain relate <fact_id1> <fact_id2> --type 支持
-    brain similar <fact_id>
+    cogmate relate <fact_id1> <fact_id2> --type 支持
+    cogmate similar <fact_id>
 """
 
 import argparse
 import json
 import sys
-from brain_core import BrainAgent
+from cogmate_core import CogmateAgent
 from intent_handler import IntentHandler
 from privacy import (
     set_fact_private, set_abstract_private, get_privacy_status,
@@ -39,8 +39,8 @@ from visual_token import generate_token, list_tokens, revoke_token, get_visual_u
 
 def cmd_store(args):
     """存储新事实"""
-    brain = BrainAgent()
-    fact_id = brain.store(
+    cogmate = CogmateAgent()
+    fact_id = cogmate.store(
         content=args.content,
         content_type=args.type,
         emotion_tag=args.emotion,
@@ -58,7 +58,7 @@ def cmd_store(args):
     print(f"   ID: {short_id} | 类型: {args.type} | 情绪: {args.emotion} | 时态: {temporal_label}{valid_str}")
     
     # 查找相似内容提示关联
-    similar = brain.find_similar(fact_id, top_k=3)
+    similar = cogmate.find_similar(fact_id, top_k=3)
     if similar:
         print(f"\n🔗 可能相关:")
         for s in similar:
@@ -67,8 +67,8 @@ def cmd_store(args):
 
 def cmd_query(args):
     """检索知识库"""
-    brain = BrainAgent()
-    results = brain.query(
+    cogmate = CogmateAgent()
+    results = cogmate.query(
         query_text=args.text,
         top_k=args.top,
         min_score=args.min_score,
@@ -103,8 +103,8 @@ def cmd_query(args):
 
 def cmd_stats(args):
     """显示统计信息"""
-    brain = BrainAgent()
-    stats = brain.stats()
+    cogmate = CogmateAgent()
+    stats = cogmate.stats()
     
     print("📊 知识库状态")
     print(f"   总事实数: {stats['total_facts']}")
@@ -119,8 +119,8 @@ def cmd_stats(args):
 
 def cmd_list(args):
     """列出最近的事实"""
-    brain = BrainAgent()
-    facts = brain.list_facts(limit=args.limit, offset=args.offset)
+    cogmate = CogmateAgent()
+    facts = cogmate.list_facts(limit=args.limit, offset=args.offset)
     
     print(f"📋 最近 {len(facts)} 条记录\n")
     
@@ -134,8 +134,8 @@ def cmd_list(args):
 
 def cmd_relate(args):
     """创建关联"""
-    brain = BrainAgent()
-    success = brain.create_relation(
+    cogmate = CogmateAgent()
+    success = cogmate.create_relation(
         from_fact_id=args.from_id,
         to_fact_id=args.to_id,
         relation_type=args.type.upper(),
@@ -151,8 +151,8 @@ def cmd_relate(args):
 
 def cmd_similar(args):
     """查找相似事实"""
-    brain = BrainAgent()
-    similar = brain.find_similar(args.fact_id, top_k=args.top)
+    cogmate = CogmateAgent()
+    similar = cogmate.find_similar(args.fact_id, top_k=args.top)
     
     if not similar:
         print("未找到相似内容")
@@ -323,33 +323,45 @@ def cmd_research(args):
     
     target = args.target
     deep = not args.shallow
+    raw_mode = getattr(args, 'raw', False)
     
     if target.startswith("topic:"):
         topic = target[6:].strip()
         print(f"🔍 正在研究主题: {topic}...")
-        report = research_topic(topic)
+        report = research_topic(topic, raw=raw_mode)
     elif target.startswith("http"):
         print(f"🔍 正在深度分析: {target}...")
-        report = research_url(target, deep=deep)
+        report = research_url(target, deep=deep, raw=raw_mode)
     else:
         # 默认当作主题处理
         print(f"🔍 正在研究主题: {target}...")
-        report = research_topic(target)
+        report = research_topic(target, raw=raw_mode)
     
-    print(format_report(report))
+    if raw_mode:
+        # 原始模式：直接输出内容供 Agent 分析
+        print("=" * 60)
+        print("📄 RAW CONTENT (供 Agent 分析)")
+        print("=" * 60)
+        print(f"主题: {report.title}")
+        print(f"来源: {report.url}")
+        print("-" * 60)
+        print(report.raw_content[:8000] if report.raw_content else "无内容")
+        print("=" * 60)
+    else:
+        print(format_report(report))
 
 
 def cmd_delete(args):
     """删除事实（三库同步）"""
-    brain = BrainAgent()
+    cogmate = CogmateAgent()
     
     # 先显示要删除的内容
-    fact = brain.get_fact(args.fact_id) if len(args.fact_id) >= 36 else None
+    fact = cogmate.get_fact(args.fact_id) if len(args.fact_id) >= 36 else None
     if not fact:
         # 尝试短ID
-        full_id = brain._resolve_short_id(args.fact_id)
+        full_id = cogmate._resolve_short_id(args.fact_id)
         if full_id:
-            fact = brain.get_fact(full_id)
+            fact = cogmate.get_fact(full_id)
     
     if not fact:
         print(f"❌ 未找到: {args.fact_id}")
@@ -364,7 +376,7 @@ def cmd_delete(args):
             print("已取消")
             return
     
-    if brain.delete(fact['fact_id']):
+    if cogmate.delete(fact['fact_id']):
         print(f"✅ 已从三库中删除")
     else:
         print(f"❌ 删除失败")
@@ -372,7 +384,7 @@ def cmd_delete(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Brain Agent CLI",
+        description="Cogmate CLI",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
     subparsers = parser.add_subparsers(dest="command", help="命令")
@@ -487,6 +499,7 @@ def main():
     p_research = subparsers.add_parser("research", help="深度调研")
     p_research.add_argument("target", help="URL 或 topic:主题")
     p_research.add_argument("--shallow", action="store_true", help="浅层模式（不探索子页面）")
+    p_research.add_argument("--raw", action="store_true", help="原始模式（跳过LLM分析，输出原始内容供Agent处理）")
     p_research.set_defaults(func=cmd_research)
     
     args = parser.parse_args()

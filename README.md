@@ -1,4 +1,4 @@
-# Brain Agent 🧠
+# Cogmate 🧠
 
 **个人知识管理系统 - 你的第二大脑**
 
@@ -28,7 +28,7 @@
 **本项目设计为与 AI Agent 协同工作。** 最简单的使用方式是将项目地址告诉你的 Agent，让它自主完成安装和配置：
 
 ```
-请帮我安装这个项目：https://github.com/MaxiiWang/SimWorld
+请帮我安装这个项目：https://github.com/MaxiiWang/Cogmate
 
 阅读 README.md 和 SETUP.md 了解项目结构，
 然后按照指引完成数据库部署和配置。
@@ -45,7 +45,7 @@ Agent 会：
 ### 备选方式：手动安装
 
 ```bash
-git clone https://github.com/MaxiiWang/SimWorld.git
+git clone https://github.com/MaxiiWang/Cogmate.git
 cd SimWorld
 chmod +x setup.sh
 ./setup.sh
@@ -119,21 +119,21 @@ cron:
 
 ```bash
 # 存储知识
-./brain store "今天学到了一个重要概念：复利效应"
-./brain store "客户说系统太难用了" --type 事件 --emotion 消极
+./cogmate store "今天学到了一个重要概念：复利效应"
+./cogmate store "客户说系统太难用了" --type 事件 --emotion 消极
 
 # 检索知识
-./brain query "复利"
-./brain query "客户反馈" --top 10
+./cogmate query "复利"
+./cogmate query "客户反馈" --top 10
 
 # 创建关联
-./brain relate <fact_id_1> <fact_id_2> --type 支持
+./cogmate relate <fact_id_1> <fact_id_2> --type 支持
 
 # 查看统计
-./brain stats
+./cogmate stats
 
 # 列出知识
-./brain list --limit 20
+./cogmate list --limit 20
 ```
 
 ### 知识类型
@@ -149,21 +149,21 @@ cron:
 ### Python API
 
 ```python
-from lib.brain_core import BrainAgent
+from lib.cogmate_core import CogmateAgent
 
-brain = BrainAgent()
+cogmate = CogmateAgent()
 
 # 存储
-fact_id = brain.store("学习内容", content_type="观点")
+fact_id = cogmate.store("学习内容", content_type="观点")
 
 # 检索
-results = brain.query("关键词", top_k=5)
+results = cogmate.query("关键词", top_k=5)
 
 # 创建关联
-brain.create_relation(from_id, to_id, "支持", confidence=4)
+cogmate.create_relation(from_id, to_id, "支持", confidence=4)
 
 # 统计
-stats = brain.stats()
+stats = cogmate.stats()
 ```
 
 ---
@@ -187,7 +187,7 @@ chmod +x visual/start.sh
 ### 生成访问 Token
 
 ```bash
-./brain visual --duration 7d --scope full
+./cogmate visual --duration 7d --scope full
 ```
 
 Token 权限级别：
@@ -200,8 +200,8 @@ Token 权限级别：
 ## 📁 项目结构
 
 ```
-brain-agent/
-├── brain                 # CLI 入口脚本
+cogmate/
+├── cogmate                 # CLI 入口脚本
 ├── setup.sh              # 一键安装脚本
 ├── README.md             # 本文件
 ├── SETUP.md              # 详细安装指南
@@ -211,7 +211,7 @@ brain-agent/
 ├── .env.example          # 环境变量模板
 │
 ├── lib/                  # 核心库
-│   ├── brain_core.py     # 主逻辑
+│   ├── cogmate_core.py     # 主逻辑
 │   ├── cli.py            # CLI 实现
 │   ├── config.py         # 配置管理
 │   ├── intent_handler.py # 意图识别
@@ -242,7 +242,7 @@ brain-agent/
 │   └── monthly_temporal_review.sh
 │
 ├── data/                 # 数据目录（gitignore）
-│   └── brain.db          # SQLite 数据库
+│   └── cogmate.db          # SQLite 数据库
 │
 └── config/               # 配置文件
     └── profile.json      # 用户档案

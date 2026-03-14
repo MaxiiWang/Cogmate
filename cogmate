@@ -1,6 +1,6 @@
 #!/bin/bash
-# Brain Agent CLI wrapper
-# Usage: ./brain <command> [args]
+# Cogmate CLI wrapper
+# Usage: ./cogmate <command> [args]
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR/lib"

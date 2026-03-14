@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Brain Agent Core Library
+Cogmate Core Library
 ========================
 三库协同的核心数据操作模块
 
@@ -8,14 +8,14 @@ Brain Agent Core Library
     pip install sentence-transformers qdrant-client neo4j
 
 使用:
-    from brain_core import BrainAgent
-    brain = BrainAgent()
+    from brain_core import CogmateAgent
+    cogmate = CogmateAgent()
     
     # 存储
-    fact_id = brain.store("今天客户说系统太难用了", content_type="事件")
+    fact_id = cogmate.store("今天客户说系统太难用了", content_type="事件")
     
     # 检索
-    results = brain.query("客户反馈")
+    results = cogmate.query("客户反馈")
 """
 
 import uuid
@@ -35,12 +35,12 @@ from config import (
 logger = setup_logging("brain_core")
 
 
-class BrainAgent:
-    """Brain Agent 核心类 - 三库协同操作"""
+class CogmateAgent:
+    """Cogmate 核心类 - 三库协同操作"""
     
     def __init__(self, lazy_load: bool = True):
         """
-        初始化 Brain Agent
+        初始化 Cogmate
         
         Args:
             lazy_load: 是否延迟加载模型（默认 True，首次使用时才加载）
@@ -484,7 +484,7 @@ class BrainAgent:
 if __name__ == "__main__":
     import sys
     
-    brain = BrainAgent()
+    cogmate = CogmateAgent()
     
     if len(sys.argv) < 2:
         print("Usage: python brain_core.py <command> [args]")
@@ -499,22 +499,22 @@ if __name__ == "__main__":
     
     if cmd == "store":
         content = sys.argv[2] if len(sys.argv) > 2 else input("Content: ")
-        fact_id = brain.store(content)
+        fact_id = cogmate.store(content)
         print(f"✅ 已存储: {fact_id[:8]}...")
     
     elif cmd == "query":
         query_text = sys.argv[2] if len(sys.argv) > 2 else input("Query: ")
-        results = brain.query(query_text)
+        results = cogmate.query(query_text)
         print(f"找到 {results['total']} 条结果:")
         for r in results["vector_results"]:
             print(f"  [{r['score']:.2f}] {r['summary'][:50]}...")
     
     elif cmd == "stats":
-        stats = brain.stats()
+        stats = cogmate.stats()
         print(json.dumps(stats, indent=2, ensure_ascii=False))
     
     elif cmd == "list":
         limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
-        facts = brain.list_facts(limit)
+        facts = cogmate.list_facts(limit)
         for f in facts:
             print(f"[{f['content_type']}] {f['summary'][:60]}...")

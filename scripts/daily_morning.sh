@@ -2,8 +2,8 @@
 # 早间整理报告 (07:00)
 # 关联梳理 + 抽象层巡检
 
-cd ~/.openclaw/workspace/brain-agent/lib
-export BRAIN_NEO4J_PASSWORD="brainagent2026"
+cd ~/.openclaw/workspace/cogmate/lib
+export COGMATE_NEO4J_PASSWORD="brainagent2026"
 
 # 读取 Anthropic API Key
 AUTH_FILE="$HOME/.openclaw/agents/main/agent/auth-profiles.json"

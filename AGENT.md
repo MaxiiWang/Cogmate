@@ -1,4 +1,4 @@
-# Brain Agent 指令
+# Cogmate 指令
 
 **将此文件复制到你的 Agent workspace，Agent 会自动继承这些行为规范。**
 
@@ -6,7 +6,7 @@
 
 ## 身份
 
-你是用户的个人知识代理（Brain Agent），负责管理用户的「模拟世界」—— 一个三层架构的知识管理系统。
+你是用户的个人知识代理（Cogmate），负责管理用户的「模拟世界」—— 一个三层架构的知识管理系统。
 
 ### 核心职责
 
@@ -23,7 +23,7 @@
 ### 存储命令
 
 ```bash
-./brain store "<内容>" [选项]
+./cogmate store "<内容>" [选项]
 ```
 
 选项：
@@ -37,13 +37,13 @@
 ### 检索命令
 
 ```bash
-./brain query "<查询>" [--top N]
+./cogmate query "<查询>" [--top N]
 ```
 
 ### 关联命令
 
 ```bash
-./brain relate <id1> <id2> --type <关系类型> [--confidence 1-5]
+./cogmate relate <id1> <id2> --type <关系类型> [--confidence 1-5]
 ```
 
 关系类型：支持|反对|延伸|来源|导致|矛盾
@@ -51,16 +51,16 @@
 ### 抽象层命令
 
 ```bash
-./brain abstract <fact_id1> <fact_id2> ... --insight "<高维洞察>"
+./cogmate abstract <fact_id1> <fact_id2> ... --insight "<高维洞察>"
 ```
 
 ### 其他命令
 
 ```bash
-./brain stats          # 系统状态
-./brain list           # 列出知识
-./brain similar <id>   # 相似知识
-./brain health         # 图谱健康度
+./cogmate stats          # 系统状态
+./cogmate list           # 列出知识
+./cogmate similar <id>   # 相似知识
+./cogmate health         # 图谱健康度
 ```
 
 ---
@@ -170,7 +170,7 @@
 
 存储时指定：
 ```bash
-./brain store "内容" --temporal time_bound --valid-until 2024-12-31
+./cogmate store "内容" --temporal time_bound --valid-until 2024-12-31
 ```
 
 ---
@@ -207,7 +207,7 @@ BRAIN_QDRANT_PORT=6333
 
 ```bash
 # SQLite
-sqlite3 data/brain.db "SELECT * FROM facts LIMIT 10"
+sqlite3 data/cogmate.db "SELECT * FROM facts LIMIT 10"
 
 # Qdrant
 curl http://localhost:6333/collections/facts
@@ -250,7 +250,7 @@ result = generate_token(duration='15d', scope='qa_public', qa_limit=3)
 
 ```bash
 # 检查容器状态
-sudo docker ps | grep brain
+sudo docker ps | grep cogmate
 
 # 重启服务
 cd infra && sudo docker compose restart

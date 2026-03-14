@@ -2,8 +2,8 @@
 # 每周报告 (周日 20:00)
 # 图谱健康 + 深度挑战 Stress Test
 
-cd ~/.openclaw/workspace/brain-agent/lib
-export BRAIN_NEO4J_PASSWORD="brainagent2026"
+cd ~/.openclaw/workspace/cogmate/lib
+export COGMATE_NEO4J_PASSWORD="brainagent2026"
 
 # 读取 Anthropic API Key + Brave API Key
 AUTH_FILE="$HOME/.openclaw/agents/main/agent/auth-profiles.json"

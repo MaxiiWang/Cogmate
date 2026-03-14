@@ -2,8 +2,8 @@
 # 每日晚报 (21:00)
 # 生成报告并通过 OpenClaw 发送到 Telegram
 
-cd ~/.openclaw/workspace/brain-agent/lib
-export BRAIN_NEO4J_PASSWORD="brainagent2026"
+cd ~/.openclaw/workspace/cogmate/lib
+export COGMATE_NEO4J_PASSWORD="brainagent2026"
 
 # 读取 Anthropic API Key
 AUTH_FILE="$HOME/.openclaw/agents/main/agent/auth-profiles.json"

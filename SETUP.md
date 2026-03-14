@@ -1,6 +1,6 @@
-# Brain Agent 安装指南
+# Cogmate 安装指南
 
-本指南帮助你从零开始搭建 Brain Agent 个人知识管理系统。
+本指南帮助你从零开始搭建 Cogmate 个人知识管理系统。
 
 ## 系统要求
 
@@ -15,8 +15,8 @@
 ### 1. 克隆项目
 
 ```bash
-git clone https://github.com/yourusername/brain-agent.git
-cd brain-agent
+git clone https://github.com/yourusername/cogmate.git
+cd cogmate
 ```
 
 ### 2. 创建 Python 虚拟环境
@@ -101,26 +101,26 @@ chmod +x infra/init_qdrant.sh
 首次运行 CLI 会自动创建 SQLite 数据库：
 
 ```bash
-./brain stats
+./cogmate stats
 ```
 
 ### 8. 验证安装
 
 ```bash
 # 存储一条测试数据
-./brain store "这是一条测试数据"
+./cogmate store "这是一条测试数据"
 
 # 检索
-./brain query "测试"
+./cogmate query "测试"
 
 # 查看统计
-./brain stats
+./cogmate stats
 ```
 
 如果看到类似输出，说明安装成功：
 
 ```
-🧠 Brain Agent 状态
+🧠 Cogmate 状态
 ━━━━━━━━━━━━━━━━━━━━
 📊 SQLite:  1 条记录
 🔍 Qdrant:  1 向量
@@ -156,7 +156,7 @@ python -m uvicorn api:app --host 0.0.0.0 --port 8000
 ### 3. 生成访问 Token
 
 ```bash
-./brain visual --duration 7d --scope full
+./cogmate visual --duration 7d --scope full
 ```
 
 或使用 Python：
@@ -211,14 +211,14 @@ openclaw cron add --schedule "0 20 * * 0" --task "生成周报"
 from brain_agent.lib.brain_core import BrainAgent
 
 # 初始化
-brain = BrainAgent()
+cogmate = CogmateAgent()
 
 # 在 Agent 的工具函数中使用
 def store_knowledge(content: str, content_type: str = "观点"):
-    return brain.store(content, content_type=content_type)
+    return cogmate.store(content, content_type=content_type)
 
 def query_knowledge(query: str, top_k: int = 5):
-    return brain.query(query, top_k=top_k)
+    return cogmate.query(query, top_k=top_k)
 ```
 
 ---
@@ -232,10 +232,10 @@ def query_knowledge(query: str, top_k: int = 5):
 sudo docker ps | grep qdrant
 
 # 查看日志
-sudo docker logs brain-qdrant
+sudo docker logs cogmate-qdrant
 
 # 重启
-sudo docker restart brain-qdrant
+sudo docker restart cogmate-qdrant
 ```
 
 ### Neo4j 连接失败
@@ -245,7 +245,7 @@ sudo docker restart brain-qdrant
 sudo docker ps | grep neo4j
 
 # 查看日志
-sudo docker logs brain-neo4j
+sudo docker logs cogmate-neo4j
 
 # 常见问题：密码不匹配
 # 解决：删除数据卷重新初始化
@@ -280,7 +280,7 @@ neo4j:
 ## 升级指南
 
 ```bash
-cd brain-agent
+cd cogmate
 git pull origin main
 
 # 重新安装依赖
@@ -299,5 +299,5 @@ pip install -r requirements.txt
 3. 开始记录你的第一条知识！
 
 ```bash
-./brain store "开始使用 Brain Agent 管理知识"
+./cogmate store "开始使用 Cogmate 管理知识"
 ```

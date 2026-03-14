@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Brain Visual API
+Cogmate Visual API
 ================
 可视化后端 API 服务
 
@@ -32,7 +32,7 @@ from config import (
 logger = setup_logging("visual_api")
 
 app = FastAPI(
-    title="Brain Visual API",
+    title="Cogmate Visual API",
     description="模拟世界可视化后端",
     version="0.1.0"
 )
@@ -152,7 +152,7 @@ async def root():
     index_file = STATIC_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return {"name": "Brain Visual API", "version": "0.1.0"}
+    return {"name": "Cogmate Visual API", "version": "0.1.0"}
 
 
 # ==================== 公开端点（无需 Token）====================
@@ -336,10 +336,10 @@ async def auth_verify(token: str = Query(...)):
 @app.get("/api/visual/stats")
 async def get_stats(token_info: TokenInfo = Depends(verify_token)):
     """获取统计概览"""
-    from brain_core import BrainAgent
+    from cogmate_core import CogmateAgent
     
-    brain = BrainAgent()
-    stats = brain.stats()
+    cogmate = CogmateAgent()
+    stats = cogmate.stats()
     
     return {
         "total_facts": stats["total_facts"],
@@ -541,16 +541,16 @@ async def get_node(
     token_info: TokenInfo = Depends(verify_token)
 ):
     """获取单个节点详情"""
-    from brain_core import BrainAgent
+    from cogmate_core import CogmateAgent
     
-    brain = BrainAgent()
-    fact = brain.get_fact(node_id)
+    cogmate = CogmateAgent()
+    fact = cogmate.get_fact(node_id)
     
     if not fact:
         raise HTTPException(status_code=404, detail="Node not found")
     
     # 获取关联
-    results = brain.query(fact.get('summary', ''), top_k=5)
+    results = cogmate.query(fact.get('summary', ''), top_k=5)
     
     return {
         "node": fact,
@@ -607,7 +607,7 @@ async def get_timeline(
     
     include_private = can_see_private(token_info)
     
-    db_path = Path.home() / ".openclaw/workspace/brain-agent/data/brain.db"
+    db_path = Path.home() / ".openclaw/workspace/cogmate/data/cogmate.db"
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
     
@@ -660,19 +660,19 @@ async def search(
     if not can_browse(token_info):
         raise HTTPException(status_code=403, detail="Browse permission required")
     
-    from brain_core import BrainAgent
+    from cogmate_core import CogmateAgent
     import sqlite3
     
     include_private = can_see_private(token_info)
     
-    brain = BrainAgent()
-    results = brain.query(q, top_k=20)  # 多取一些以备过滤
+    cogmate = CogmateAgent()
+    results = cogmate.query(q, top_k=20)  # 多取一些以备过滤
     
     vector_results = results.get("vector_results", [])
     
     # 过滤私有内容
     if not include_private:
-        db_path = Path.home() / ".openclaw/workspace/brain-agent/data/brain.db"
+        db_path = Path.home() / ".openclaw/workspace/cogmate/data/cogmate.db"
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
@@ -764,7 +764,7 @@ async def ask(
             detail="This token only allows browsing, not Q&A"
         )
     
-    from brain_core import BrainAgent
+    from cogmate_core import CogmateAgent
     from visual_token import check_qa_limit, increment_qa_count
     import sqlite3
     
@@ -776,13 +776,13 @@ async def ask(
             detail=f"Q&A limit exceeded. This token allows {limit} questions."
         )
     
-    brain = BrainAgent()
+    cogmate = CogmateAgent()
     
     # 根据 scope 决定是否过滤私有内容
     include_private = can_see_private(token_info)
     
     # 语义搜索
-    results = brain.query(
+    results = cogmate.query(
         query_text=request.question,
         top_k=request.max_sources * 2,  # 多取一些以备过滤
         min_score=0.5
@@ -792,7 +792,7 @@ async def ask(
     vector_results = results.get("vector_results", [])
     if not include_private:
         # 查询哪些 fact_id 是私有的
-        db_path = Path.home() / ".openclaw/workspace/brain-agent/data/brain.db"
+        db_path = Path.home() / ".openclaw/workspace/cogmate/data/cogmate.db"
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
@@ -864,7 +864,7 @@ async def ask_stream(
             detail="This token only allows browsing, not Q&A"
         )
     
-    from brain_core import BrainAgent
+    from cogmate_core import CogmateAgent
     from visual_token import check_qa_limit, increment_qa_count
     from llm_answer import generate_answer
     import sqlite3
@@ -876,16 +876,16 @@ async def ask_stream(
             yield f"data: {json.dumps({'error': 'limit_exceeded', 'message': f'问答次数已用完（限制 {limit} 次）'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
     
-    brain = BrainAgent()
+    cogmate = CogmateAgent()
     include_private = can_see_private(token_info)
     
     # 语义搜索
-    results = brain.query(query_text=q, top_k=10, min_score=0.5)
+    results = cogmate.query(query_text=q, top_k=10, min_score=0.5)
     vector_results = results.get("vector_results", [])
     
     # 过滤私有内容
     if not include_private:
-        db_path = Path.home() / ".openclaw/workspace/brain-agent/data/brain.db"
+        db_path = Path.home() / ".openclaw/workspace/cogmate/data/cogmate.db"
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         fact_ids = [r["fact_id"] for r in vector_results]
@@ -1117,13 +1117,13 @@ async def action(
     token_info: TokenInfo = Depends(require_full_permission)
 ):
     """执行操作（需要完整权限）"""
-    from brain_core import BrainAgent
+    from cogmate_core import CogmateAgent
     
-    brain = BrainAgent()
+    cogmate = CogmateAgent()
     
     if request.action == "create_relation":
         params = request.params
-        result = brain.create_relation(
+        result = cogmate.create_relation(
             params["from_id"],
             params["to_id"],
             params.get("relation_type", "RELATES_TO"),

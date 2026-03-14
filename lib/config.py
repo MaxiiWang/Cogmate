@@ -1,5 +1,5 @@
 """
-Brain Agent - Centralized Configuration
+Cogmate - Centralized Configuration
 
 All sensitive values are read from environment variables.
 See .env.example for configuration template.
@@ -15,7 +15,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 SQLITE_PATH = Path(os.environ.get(
     "BRAIN_SQLITE_PATH",
-    str(DATA_DIR / "brain.db")
+    str(DATA_DIR / "cogmate.db")
 ))
 
 # ===== Neo4j =====
@@ -44,7 +44,7 @@ LLM_MODEL = os.environ.get("BRAIN_LLM_MODEL", "claude-3-haiku-20240307")
 # ===== Logging =====
 LOG_LEVEL = os.environ.get("BRAIN_LOG_LEVEL", "INFO")
 
-def setup_logging(name: str = "brain") -> logging.Logger:
+def setup_logging(name: str = "cogmate") -> logging.Logger:
     """Setup logging for a module."""
     logger = logging.getLogger(name)
     if not logger.handlers:
@@ -89,10 +89,14 @@ def get_neo4j():
     global _neo4j_driver
     if _neo4j_driver is None:
         from neo4j import GraphDatabase
-        _neo4j_driver = GraphDatabase.driver(
-            NEO4J_URI,
-            auth=(NEO4J_USER, NEO4J_PASSWORD)
-        )
+        # Support no-auth mode when password is empty or "none"
+        if NEO4J_PASSWORD and NEO4J_PASSWORD.lower() != "none":
+            _neo4j_driver = GraphDatabase.driver(
+                NEO4J_URI,
+                auth=(NEO4J_USER, NEO4J_PASSWORD)
+            )
+        else:
+            _neo4j_driver = GraphDatabase.driver(NEO4J_URI)
     return _neo4j_driver
 
 

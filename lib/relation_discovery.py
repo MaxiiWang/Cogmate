@@ -24,14 +24,14 @@ Relation Discovery - 多跳关联发现
 
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, timedelta
-from brain_core import BrainAgent, get_neo4j, get_sqlite
+from cogmate_core import CogmateAgent, get_neo4j, get_sqlite
 
 
 class RelationDiscovery:
     """多跳关联发现引擎"""
     
     def __init__(self):
-        self.brain = BrainAgent()
+        self.cogmate = CogmateAgent()
     
     def discover_relations(
         self,
@@ -52,7 +52,7 @@ class RelationDiscovery:
         Returns:
             [{"fact_id", "summary", "score", "hop", "relation_type", "reason"}, ...]
         """
-        fact = self.brain.get_fact(fact_id)
+        fact = self.cogmate.get_fact(fact_id)
         if not fact:
             return []
         
@@ -60,7 +60,7 @@ class RelationDiscovery:
         seen_ids = {fact_id}
         
         # 1. 直接向量相似匹配
-        direct = self.brain.find_similar(fact_id, top_k=top_k)
+        direct = self.cogmate.find_similar(fact_id, top_k=top_k)
         for d in direct:
             if d["fact_id"] not in seen_ids and d["score"] >= min_score:
                 suggestions.append({
@@ -168,7 +168,7 @@ class RelationDiscovery:
                     "candidates": candidates
                 })
         
-        stats = self.brain.stats()
+        stats = self.cogmate.stats()
         
         return {
             "orphan_count": len(orphans),
@@ -222,8 +222,8 @@ class RelationDiscovery:
     def _compute_similarity(self, text1: str, text2: str) -> float:
         """计算两段文本的相似度"""
         # 使用向量计算
-        vec1 = self.brain.embed(text1)
-        vec2 = self.brain.embed(text2)
+        vec1 = self.cogmate.embed(text1)
+        vec2 = self.cogmate.embed(text2)
         
         # 余弦相似度
         import numpy as np

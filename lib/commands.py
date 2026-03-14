@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Brain Agent - Slash Commands
+Cogmate - Slash Commands
 =============================
 实现 /why, /decide, /hub, /conflict 等命令
 
@@ -11,7 +11,7 @@ Brain Agent - Slash Commands
 """
 
 from typing import Dict, List, Optional, Tuple
-from brain_core import BrainAgent, get_neo4j
+from cogmate_core import CogmateAgent, get_neo4j
 
 # Phase 2 imports
 try:
@@ -25,7 +25,7 @@ class CommandHandler:
     """Slash 命令处理器"""
     
     def __init__(self):
-        self.brain = BrainAgent()
+        self.cogmate = CogmateAgent()
     
     def execute(self, command: str) -> Dict:
         """
@@ -80,7 +80,7 @@ class CommandHandler:
             }
         
         # 1. 向量检索相关事实
-        search_results = self.brain.query(query, top_k=5)
+        search_results = self.cogmate.query(query, top_k=5)
         relevant_facts = search_results.get("vector_results", [])
         
         if not relevant_facts:
@@ -136,7 +136,7 @@ class CommandHandler:
             }
         
         # 1. 检索相关事实
-        search_results = self.brain.query(topic, top_k=10)
+        search_results = self.cogmate.query(topic, top_k=10)
         relevant_facts = search_results.get("vector_results", [])
         
         if not relevant_facts:
@@ -298,7 +298,7 @@ class CommandHandler:
         """
         /status - 系统状态
         """
-        stats = self.brain.stats()
+        stats = self.cogmate.stats()
         
         # 计算健康度指标
         total_nodes = stats["graph_nodes"]
@@ -408,7 +408,7 @@ class CommandHandler:
         """
         /help - 命令帮助
         """
-        help_text = """📖 **Brain Agent 命令帮助**
+        help_text = """📖 **Cogmate 命令帮助**
 
 **检索与决策**
   `/why [问题]` — 从知识库寻找依据，含图谱路径推理

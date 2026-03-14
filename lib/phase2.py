@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Brain Agent - Phase 2 Features
+Cogmate - Phase 2 Features
 ==============================
 1. 抽象层管理 (AbstractionManager)
 2. 事实清理建议 (CleanupManager)
@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 
-from brain_core import BrainAgent
+from cogmate_core import CogmateAgent
 from config import get_sqlite, get_neo4j, setup_logging, PROJECT_ROOT
 
 logger = setup_logging("phase2")
@@ -33,7 +33,7 @@ class AbstractionManager:
     """抽象层管理器"""
     
     def __init__(self):
-        self.brain = BrainAgent()
+        self.cogmate = CogmateAgent()
         self.threshold = ABSTRACTION_THRESHOLD
     
     def find_abstraction_candidates(self) -> List[Dict]:
@@ -205,7 +205,7 @@ class CleanupManager:
     """事实清理管理器"""
     
     def __init__(self):
-        self.brain = BrainAgent()
+        self.cogmate = CogmateAgent()
         self.cleanup_days = CLEANUP_DAYS
     
     def find_cleanup_candidates(self) -> List[Dict]:
@@ -266,7 +266,7 @@ class CleanupManager:
         """删除指定事实（三库同步）"""
         deleted = 0
         for fid in fact_ids:
-            if self.brain.delete(fid):
+            if self.cogmate.delete(fid):
                 deleted += 1
         return deleted
     
@@ -368,7 +368,7 @@ class PageIndexBuilder:
     """PageIndex 自动构建器"""
     
     def __init__(self):
-        self.brain = BrainAgent()
+        self.cogmate = CogmateAgent()
     
     def build_index(self) -> Dict:
         """
