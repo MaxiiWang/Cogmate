@@ -94,12 +94,26 @@ SCOPE_LABELS = {
 }
 
 
+def _ensure_namespace_column():
+    """确保 visual_tokens 表有 namespace 字段"""
+    conn = get_sqlite()
+    cursor = conn.cursor()
+    cursor.execute("PRAGMA table_info(visual_tokens)")
+    columns = [col[1] for col in cursor.fetchall()]
+    if 'namespace' not in columns:
+        cursor.execute("ALTER TABLE visual_tokens ADD COLUMN namespace TEXT DEFAULT 'default'")
+        conn.commit()
+        logger.info("Added namespace column to visual_tokens")
+    conn.close()
+
+
 def generate_token(
     duration: str = '7d',
     permissions: str = 'full',
     scope: str = None,
     note: str = None,
-    qa_limit: int = None
+    qa_limit: int = None,
+    namespace: str = 'default'
 ) -> Dict:
     """
     生成新的访问 Token
@@ -109,6 +123,7 @@ def generate_token(
         permissions: 'full' 或 'readonly' (legacy)
         scope: 'full' | 'qa_public' | 'browse_public'
         note: 备注
+        namespace: 绑定的 namespace（默认 'default'）
     
     Returns:
         {
@@ -116,9 +131,12 @@ def generate_token(
             'expires_at': str,
             'permissions': str,
             'scope': str,
+            'namespace': str,
             'url_param': str
         }
     """
+    _ensure_namespace_column()
+    
     # scope 优先，向后兼容 permissions
     if scope is None:
         scope = 'full' if permissions == 'full' else 'browse_public'
@@ -141,8 +159,8 @@ def generate_token(
     cursor = conn.cursor()
     
     cursor.execute('''
-        INSERT INTO visual_tokens (token, created_at, expires_at, permissions, scope, note, qa_limit, qa_count)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 0)
+        INSERT INTO visual_tokens (token, created_at, expires_at, permissions, scope, note, qa_limit, qa_count, namespace)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)
     ''', (
         token,
         now.isoformat(),
@@ -150,7 +168,8 @@ def generate_token(
         permissions,
         scope,
         note,
-        qa_limit
+        qa_limit,
+        namespace
     ))
     
     conn.commit()
@@ -165,21 +184,25 @@ def generate_token(
         'scope': scope,
         'scope_label': SCOPE_LABELS.get(scope, scope),
         'duration': duration,
-        'qa_limit': qa_limit
+        'qa_limit': qa_limit,
+        'namespace': namespace
     }
 
 
-def verify_token(token: str, ip: str = None) -> Tuple[bool, Optional[Dict]]:
+def verify_token(token: str, ip: str = None, namespace: str = None) -> Tuple[bool, Optional[Dict]]:
     """
     验证 Token 有效性
     
     Args:
         token: Token 字符串
         ip: 访问者 IP（可选，用于记录）
+        namespace: 请求的 namespace（可选，用于验证绑定）
     
     Returns:
         (valid, token_info) - valid 为 True 时返回 token 信息
     """
+    _ensure_namespace_column()
+    
     if not token:
         return False, None
     
@@ -187,7 +210,7 @@ def verify_token(token: str, ip: str = None) -> Tuple[bool, Optional[Dict]]:
     cursor = conn.cursor()
     
     cursor.execute('''
-        SELECT token, expires_at, permissions, revoked, access_count, scope, qa_limit, qa_count
+        SELECT token, expires_at, permissions, revoked, access_count, scope, qa_limit, qa_count, namespace
         FROM visual_tokens
         WHERE token = ?
     ''', (token,))
@@ -198,7 +221,7 @@ def verify_token(token: str, ip: str = None) -> Tuple[bool, Optional[Dict]]:
         conn.close()
         return False, {'error': 'token_not_found'}
     
-    token_str, expires_at, permissions, revoked, access_count, scope, qa_limit, qa_count = row
+    token_str, expires_at, permissions, revoked, access_count, scope, qa_limit, qa_count, token_namespace = row
     # 向后兼容：旧 token 没有 scope 字段
     if scope is None:
         scope = 'full' if permissions == 'full' else 'browse_public'
@@ -207,6 +230,17 @@ def verify_token(token: str, ip: str = None) -> Tuple[bool, Optional[Dict]]:
         qa_limit = DEFAULT_QA_LIMIT if scope == 'qa_public' else 0
     if qa_count is None:
         qa_count = 0
+    # 向后兼容：旧 token 没有 namespace 字段
+    if token_namespace is None:
+        token_namespace = 'default'
+    
+    # 检查 namespace 绑定
+    if namespace is not None and token_namespace != namespace:
+        conn.close()
+        return False, {
+            'error': 'namespace_mismatch',
+            'message': f'Token 绑定到 namespace "{token_namespace}"，无法访问 "{namespace}"'
+        }
     
     # 检查是否已撤销
     if revoked:
@@ -239,7 +273,8 @@ def verify_token(token: str, ip: str = None) -> Tuple[bool, Optional[Dict]]:
         'scope_label': SCOPE_LABELS.get(scope, scope),
         'access_count': access_count + 1,
         'qa_limit': qa_limit,
-        'qa_count': qa_count
+        'qa_count': qa_count,
+        'namespace': token_namespace
     }
 
 
@@ -368,30 +403,51 @@ def revoke_all_tokens() -> int:
     return affected
 
 
-def list_tokens(include_revoked: bool = False) -> List[Dict]:
-    """列出所有 Token"""
+def list_tokens(include_revoked: bool = False, namespace: str = None) -> List[Dict]:
+    """列出 Token（可按 namespace 过滤）"""
+    _ensure_namespace_column()
+    
     conn = get_sqlite()
     cursor = conn.cursor()
     
     if include_revoked:
-        cursor.execute('''
-            SELECT token, created_at, expires_at, permissions, 
-                   access_count, last_access_at, revoked, note, scope
-            FROM visual_tokens
-            ORDER BY created_at DESC
-        ''')
+        if namespace:
+            cursor.execute('''
+                SELECT token, created_at, expires_at, permissions, 
+                       access_count, last_access_at, revoked, note, scope, namespace
+                FROM visual_tokens
+                WHERE namespace = ?
+                ORDER BY created_at DESC
+            ''', (namespace,))
+        else:
+            cursor.execute('''
+                SELECT token, created_at, expires_at, permissions, 
+                       access_count, last_access_at, revoked, note, scope, namespace
+                FROM visual_tokens
+                ORDER BY created_at DESC
+            ''')
     else:
-        cursor.execute('''
-            SELECT token, created_at, expires_at, permissions, 
-                   access_count, last_access_at, revoked, note, scope
-            FROM visual_tokens
-            WHERE revoked = 0 AND expires_at > ?
-            ORDER BY created_at DESC
-        ''', (datetime.now().isoformat(),))
+        if namespace:
+            cursor.execute('''
+                SELECT token, created_at, expires_at, permissions, 
+                       access_count, last_access_at, revoked, note, scope, namespace
+                FROM visual_tokens
+                WHERE revoked = 0 AND expires_at > ? AND namespace = ?
+                ORDER BY created_at DESC
+            ''', (datetime.now().isoformat(), namespace))
+        else:
+            cursor.execute('''
+                SELECT token, created_at, expires_at, permissions, 
+                       access_count, last_access_at, revoked, note, scope, namespace
+                FROM visual_tokens
+                WHERE revoked = 0 AND expires_at > ?
+                ORDER BY created_at DESC
+            ''', (datetime.now().isoformat(),))
     
     results = []
     for row in cursor.fetchall():
         scope = row[8] if len(row) > 8 and row[8] else 'full'
+        token_ns = row[9] if len(row) > 9 and row[9] else 'default'
         results.append({
             'token': row[0][:8] + '...',  # 只显示前8位
             'token_full': row[0],
@@ -403,7 +459,8 @@ def list_tokens(include_revoked: bool = False) -> List[Dict]:
             'revoked': bool(row[6]),
             'note': row[7],
             'scope': scope,
-            'scope_label': SCOPE_LABELS.get(scope, scope)
+            'scope_label': SCOPE_LABELS.get(scope, scope),
+            'namespace': token_ns
         })
     
     conn.close()

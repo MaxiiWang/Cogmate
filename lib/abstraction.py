@@ -182,7 +182,7 @@ def confirm_abstract(abstract_id: str, description: str) -> bool:
     return success
 
 
-def list_abstracts(status: Optional[str] = None) -> List[Dict]:
+def list_abstracts(status: Optional[str] = None, namespace: str = "default") -> List[Dict]:
     """列出抽象层记录"""
     conn = get_sqlite()
     cursor = conn.cursor()
@@ -191,14 +191,14 @@ def list_abstracts(status: Optional[str] = None) -> List[Dict]:
         cursor.execute('''
             SELECT abstract_id, name, description, cluster_theme, 
                    source_fact_ids, status, created_at, confirmed_at
-            FROM abstracts WHERE status = ?
-        ''', (status,))
+            FROM abstracts WHERE status = ? AND namespace = ?
+        ''', (status, namespace))
     else:
         cursor.execute('''
             SELECT abstract_id, name, description, cluster_theme, 
                    source_fact_ids, status, created_at, confirmed_at
-            FROM abstracts
-        ''')
+            FROM abstracts WHERE namespace = ?
+        ''', (namespace,))
     
     results = []
     for row in cursor.fetchall():

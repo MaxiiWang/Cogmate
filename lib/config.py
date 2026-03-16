@@ -13,6 +13,8 @@ from typing import Optional
 # ===== Paths =====
 PROJECT_ROOT = Path(__file__).parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
+CONFIG_DIR = PROJECT_ROOT / "config"
+PROFILES_DIR = CONFIG_DIR / "profiles"
 SQLITE_PATH = Path(os.environ.get(
     "BRAIN_SQLITE_PATH",
     str(DATA_DIR / "cogmate.db")
@@ -105,6 +107,36 @@ def get_sqlite():
     import sqlite3
     SQLITE_PATH.parent.mkdir(parents=True, exist_ok=True)
     return sqlite3.connect(SQLITE_PATH)
+
+
+def get_collection_name(namespace: str = "default") -> str:
+    """Get Qdrant collection name for a namespace."""
+    if namespace == "default":
+        return COLLECTION_NAME
+    return f"{COLLECTION_NAME}_{namespace}"
+
+
+def ensure_namespace_schema():
+    """Ensure the database has namespace support (run migration if needed)."""
+    import sqlite3
+    conn = sqlite3.connect(SQLITE_PATH)
+    cursor = conn.cursor()
+    # Check if namespace column exists on facts
+    cursor.execute("PRAGMA table_info(facts)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "namespace" not in columns:
+        # Run migration
+        conn.close()
+        from pathlib import Path as _Path
+        import importlib.util
+        migrate_script = _Path(__file__).parent.parent / "scripts" / "migrate_namespace.py"
+        if migrate_script.exists():
+            spec = importlib.util.spec_from_file_location("migrate_namespace", migrate_script)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            mod.migrate()
+    else:
+        conn.close()
 
 
 def close_connections():

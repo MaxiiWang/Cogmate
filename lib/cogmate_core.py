@@ -29,6 +29,7 @@ from pathlib import Path
 from config import (
     SQLITE_PATH, EMBEDDING_DIM, COLLECTION_NAME,
     get_embedder, get_qdrant, get_neo4j, get_sqlite,
+    get_collection_name, ensure_namespace_schema,
     setup_logging
 )
 
@@ -38,14 +39,17 @@ logger = setup_logging("brain_core")
 class CogmateAgent:
     """Cogmate 核心类 - 三库协同操作"""
     
-    def __init__(self, lazy_load: bool = True):
+    def __init__(self, namespace: str = "default", lazy_load: bool = True):
         """
         初始化 Cogmate
-        
+
         Args:
+            namespace: 数据隔离命名空间（默认 'default'）
             lazy_load: 是否延迟加载模型（默认 True，首次使用时才加载）
         """
+        self.namespace = namespace
         self.lazy_load = lazy_load
+        ensure_namespace_schema()
         if not lazy_load:
             # 立即加载所有组件
             get_embedder()
@@ -67,11 +71,12 @@ class CogmateAgent:
         source_type: str = "user_input",
         source_url: Optional[str] = None,
         valid_until: Optional[str] = None,
-        temporal_type: str = "permanent"
+        temporal_type: str = "permanent",
+        namespace: Optional[str] = None
     ) -> str:
         """
         存储新事实 - 三库同步写入
-        
+
         Args:
             content: 事实内容（会作为 summary）
             content_type: 事件|观点|情绪|资讯|决策
@@ -81,37 +86,62 @@ class CogmateAgent:
             source_url: 来源URL（仅网络来源需要）
             valid_until: 有效期截止日期 (YYYY-MM 或 YYYY-MM-DD)
             temporal_type: permanent|time_bound|historical|prediction
-        
+            namespace: 命名空间（默认使用 self.namespace）
+
         Returns:
             fact_id: 新创建的事实ID
         """
+        ns = namespace or self.namespace
         fact_id = str(uuid.uuid4())
         timestamp = datetime.now().isoformat()
-        
+
         # 1. 生成 embedding
         vector = self.embed(content)
-        
+
         # 2. 写入 Qdrant
-        self._store_qdrant(fact_id, content, content_type, emotion_tag, 
-                          context, source_type, source_url, timestamp, vector)
-        
+        self._store_qdrant(fact_id, content, content_type, emotion_tag,
+                          context, source_type, source_url, timestamp, vector, ns)
+
         # 3. 写入 Neo4j
-        self._store_neo4j(fact_id, content, content_type, timestamp, source_type)
-        
+        self._store_neo4j(fact_id, content, content_type, timestamp, source_type, ns)
+
         # 4. 写入 SQLite（包含时态信息）
         self._store_sqlite(fact_id, content, content_type, emotion_tag,
                           context, source_type, source_url, timestamp,
-                          valid_until, temporal_type)
-        
+                          valid_until, temporal_type, ns)
+
         return fact_id
+    
+    def _ensure_qdrant_collection(self, namespace: str = "default"):
+        """确保 Qdrant collection 存在"""
+        from qdrant_client.models import Distance, VectorParams
+        
+        client = get_qdrant()
+        collection = get_collection_name(namespace)
+        
+        # 检查 collection 是否存在
+        collections = client.get_collections().collections
+        if not any(c.name == collection for c in collections):
+            logger.info(f"创建 Qdrant collection: {collection}")
+            client.create_collection(
+                collection_name=collection,
+                vectors_config=VectorParams(
+                    size=EMBEDDING_DIM,
+                    distance=Distance.COSINE
+                )
+            )
     
     def _store_qdrant(self, fact_id: str, summary: str, content_type: str,
                       emotion_tag: str, context: str, source_type: str,
-                      source_url: str, timestamp: str, vector: List[float]):
+                      source_url: str, timestamp: str, vector: List[float],
+                      namespace: str = "default"):
         """写入 Qdrant 向量数据库"""
         from qdrant_client.models import PointStruct
+
+        self._ensure_qdrant_collection(namespace)
         
         client = get_qdrant()
+        collection = get_collection_name(namespace)
         point = PointStruct(
             id=fact_id,
             vector=vector,
@@ -123,13 +153,14 @@ class CogmateAgent:
                 "context": context,
                 "source_type": source_type,
                 "source_url": source_url,
-                "timestamp": timestamp
+                "timestamp": timestamp,
+                "namespace": namespace
             }
         )
-        client.upsert(collection_name=COLLECTION_NAME, points=[point])
+        client.upsert(collection_name=collection, points=[point])
     
     def _store_neo4j(self, fact_id: str, summary: str, content_type: str,
-                     timestamp: str, source_type: str):
+                     timestamp: str, source_type: str, namespace: str = "default"):
         """写入 Neo4j 图数据库"""
         driver = get_neo4j()
         with driver.session() as session:
@@ -139,25 +170,27 @@ class CogmateAgent:
                     summary: $summary,
                     content_type: $content_type,
                     timestamp: $timestamp,
-                    source_type: $source_type
+                    source_type: $source_type,
+                    namespace: $namespace
                 })
             """, fact_id=fact_id, summary=summary, content_type=content_type,
-                timestamp=timestamp, source_type=source_type)
+                timestamp=timestamp, source_type=source_type, namespace=namespace)
     
     def _store_sqlite(self, fact_id: str, summary: str, content_type: str,
                       emotion_tag: str, context: str, source_type: str,
                       source_url: str, timestamp: str,
-                      valid_until: str = None, temporal_type: str = "permanent"):
+                      valid_until: str = None, temporal_type: str = "permanent",
+                      namespace: str = "default"):
         """写入 SQLite 元数据库"""
         conn = get_sqlite()
         cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO facts (fact_id, summary, content_type, emotion_tag,
                               context, source_type, source_url, timestamp,
-                              valid_until, temporal_type)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                              valid_until, temporal_type, namespace)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (fact_id, summary, content_type, emotion_tag, context,
-              source_type, source_url, timestamp, valid_until, temporal_type))
+              source_type, source_url, timestamp, valid_until, temporal_type, namespace))
         conn.commit()
         conn.close()
     
@@ -166,17 +199,19 @@ class CogmateAgent:
         query_text: str,
         top_k: int = 5,
         min_score: float = 0.5,
-        include_graph: bool = True
+        include_graph: bool = True,
+        namespace: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         检索知识库
-        
+
         Args:
             query_text: 查询文本
             top_k: 返回最相似的 K 条结果
             min_score: 最低相似度阈值
             include_graph: 是否包含图谱关联查询
-        
+            namespace: 命名空间（默认使用 self.namespace）
+
         Returns:
             {
                 "vector_results": [...],  # 向量检索结果
@@ -184,34 +219,38 @@ class CogmateAgent:
                 "total": int
             }
         """
+        ns = namespace or self.namespace
+
         # 1. 向量检索
-        vector_results = self._query_qdrant(query_text, top_k, min_score)
-        
+        vector_results = self._query_qdrant(query_text, top_k, min_score, ns)
+
         # 2. 图谱查询（基于向量检索结果的 fact_id）
         graph_results = []
         if include_graph and vector_results:
             fact_ids = [r["fact_id"] for r in vector_results]
-            graph_results = self._query_neo4j_relations(fact_ids)
-        
+            graph_results = self._query_neo4j_relations(fact_ids, ns)
+
         return {
             "vector_results": vector_results,
             "graph_results": graph_results,
             "total": len(vector_results)
         }
     
-    def _query_qdrant(self, query_text: str, top_k: int, min_score: float) -> List[Dict]:
+    def _query_qdrant(self, query_text: str, top_k: int, min_score: float,
+                      namespace: str = "default") -> List[Dict]:
         """向量检索"""
         vector = self.embed(query_text)
         client = get_qdrant()
-        
+        collection = get_collection_name(namespace)
+
         response = client.query_points(
-            collection_name=COLLECTION_NAME,
+            collection_name=collection,
             query=vector,
             limit=top_k,
             score_threshold=min_score,
             with_payload=True
         )
-        
+
         return [
             {
                 "fact_id": r.id,
@@ -221,21 +260,22 @@ class CogmateAgent:
             for r in response.points
         ]
     
-    def _query_neo4j_relations(self, fact_ids: List[str]) -> List[Dict]:
+    def _query_neo4j_relations(self, fact_ids: List[str],
+                              namespace: str = "default") -> List[Dict]:
         """查询图谱中的关联关系"""
         driver = get_neo4j()
         relations = []
-        
+
         with driver.session() as session:
-            # 查询与这些事实相关的所有边
             result = session.run("""
                 MATCH (a:Fact)-[r]->(b:Fact)
-                WHERE a.fact_id IN $fact_ids OR b.fact_id IN $fact_ids
+                WHERE (a.fact_id IN $fact_ids OR b.fact_id IN $fact_ids)
+                  AND a.namespace = $namespace AND b.namespace = $namespace
                 RETURN a.fact_id AS from_id, a.summary AS from_summary,
                        type(r) AS relation_type, r.confidence AS confidence,
                        b.fact_id AS to_id, b.summary AS to_summary
-            """, fact_ids=fact_ids)
-            
+            """, fact_ids=fact_ids, namespace=namespace)
+
             for record in result:
                 relations.append({
                     "from_id": record["from_id"],
@@ -245,36 +285,36 @@ class CogmateAgent:
                     "to_id": record["to_id"],
                     "to_summary": record["to_summary"]
                 })
-        
+
         return relations
     
-    def resolve_short_id(self, short_id: str) -> Optional[str]:
+    def resolve_short_id(self, short_id: str, namespace: Optional[str] = None) -> Optional[str]:
         """
         将短ID解析为完整UUID
-        
+
         Args:
             short_id: 8位或更短的ID前缀，或完整UUID
-        
+            namespace: 命名空间（默认使用 self.namespace）
+
         Returns:
             完整的fact_id，如果找不到返回None
         """
-        # 如果已经是完整UUID格式，直接返回
         if len(short_id) == 36 and short_id.count('-') == 4:
             return short_id
-        
+
+        ns = namespace or self.namespace
         conn = get_sqlite()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT fact_id FROM facts WHERE fact_id LIKE ?",
-            (f"{short_id}%",)
+            "SELECT fact_id FROM facts WHERE fact_id LIKE ? AND namespace = ?",
+            (f"{short_id}%", ns)
         )
         rows = cursor.fetchall()
         conn.close()
-        
+
         if len(rows) == 1:
             return rows[0][0]
         elif len(rows) > 1:
-            # 多个匹配，尝试精确匹配
             for row in rows:
                 if row[0].startswith(short_id):
                     return row[0]
@@ -325,105 +365,113 @@ class CogmateAgent:
             
             return result.single() is not None
     
-    def get_fact(self, fact_id: str) -> Optional[Dict]:
+    def get_fact(self, fact_id: str, namespace: Optional[str] = None) -> Optional[Dict]:
         """根据 ID 获取单条事实"""
         conn = get_sqlite()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM facts WHERE fact_id = ?", (fact_id,))
         row = cursor.fetchone()
-        conn.close()
-        
         if row:
-            columns = ["fact_id", "summary", "content_type", "emotion_tag",
-                      "context", "source_type", "source_url", "timestamp"]
-            return dict(zip(columns, row))
+            col_names = [desc[0] for desc in cursor.description]
+            conn.close()
+            return dict(zip(col_names, row))
+        conn.close()
         return None
     
-    def list_facts(self, limit: int = 20, offset: int = 0) -> List[Dict]:
+    def list_facts(self, limit: int = 20, offset: int = 0,
+                   namespace: Optional[str] = None) -> List[Dict]:
         """列出最近的事实"""
+        ns = namespace or self.namespace
         conn = get_sqlite()
         cursor = conn.cursor()
         cursor.execute("""
-            SELECT * FROM facts 
-            ORDER BY timestamp DESC 
+            SELECT * FROM facts
+            WHERE namespace = ?
+            ORDER BY timestamp DESC
             LIMIT ? OFFSET ?
-        """, (limit, offset))
+        """, (ns, limit, offset))
         rows = cursor.fetchall()
+        col_names = [desc[0] for desc in cursor.description]
         conn.close()
-        
-        columns = ["fact_id", "summary", "content_type", "emotion_tag",
-                  "context", "source_type", "source_url", "timestamp"]
-        return [dict(zip(columns, row)) for row in rows]
+        return [dict(zip(col_names, row)) for row in rows]
     
-    def stats(self) -> Dict[str, Any]:
+    def stats(self, namespace: Optional[str] = None) -> Dict[str, Any]:
         """获取系统统计信息"""
+        ns = namespace or self.namespace
+
         # SQLite 统计
         conn = get_sqlite()
         cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM facts")
+        cursor.execute("SELECT COUNT(*) FROM facts WHERE namespace = ?", (ns,))
         fact_count = cursor.fetchone()[0]
-        
+
         cursor.execute("""
-            SELECT content_type, COUNT(*) 
-            FROM facts 
+            SELECT content_type, COUNT(*)
+            FROM facts
+            WHERE namespace = ?
             GROUP BY content_type
-        """)
+        """, (ns,))
         type_counts = dict(cursor.fetchall())
         conn.close()
-        
+
         # Neo4j 统计
         driver = get_neo4j()
         with driver.session() as session:
-            result = session.run("MATCH (n:Fact) RETURN COUNT(n) AS count")
+            result = session.run(
+                "MATCH (n:Fact) WHERE n.namespace = $ns RETURN COUNT(n) AS count",
+                ns=ns
+            )
             node_count = result.single()["count"]
-            
-            result = session.run("MATCH ()-[r]->() RETURN COUNT(r) AS count")
+
+            result = session.run(
+                "MATCH (a:Fact {namespace: $ns})-[r]->(b:Fact {namespace: $ns}) RETURN COUNT(r) AS count",
+                ns=ns
+            )
             edge_count = result.single()["count"]
-        
+
         return {
+            "namespace": ns,
             "total_facts": fact_count,
             "by_type": type_counts,
             "graph_nodes": node_count,
             "graph_edges": edge_count
         }
     
-    def find_similar(self, fact_id: str, top_k: int = 5) -> List[Dict]:
+    def find_similar(self, fact_id: str, top_k: int = 5,
+                     namespace: Optional[str] = None) -> List[Dict]:
         """找到与指定事实相似的其他事实（用于关联推荐）"""
+        ns = namespace or self.namespace
         fact = self.get_fact(fact_id)
         if not fact:
             return []
-        
-        results = self._query_qdrant(fact["summary"], top_k + 1, 0.5)
-        # 排除自己
+
+        results = self._query_qdrant(fact["summary"], top_k + 1, 0.5, ns)
         return [r for r in results if r["fact_id"] != fact_id][:top_k]
     
-    def delete(self, fact_id: str) -> bool:
+    def delete(self, fact_id: str, namespace: Optional[str] = None) -> bool:
         """
         删除事实 - 三库同步删除
-        
+
         Args:
             fact_id: 事实ID（支持完整ID或前8位短ID）
-        
+            namespace: 命名空间（默认使用 self.namespace）
+
         Returns:
             是否成功删除
         """
+        ns = namespace or self.namespace
+
         # 支持短ID查找
         if len(fact_id) < 36:
             full_id = self._resolve_short_id(fact_id)
             if not full_id:
                 return False
             fact_id = full_id
-        
+
         try:
-            # 1. 删除 Qdrant
-            self._delete_qdrant(fact_id)
-            
-            # 2. 删除 Neo4j（节点及其所有关联边）
+            self._delete_qdrant(fact_id, ns)
             self._delete_neo4j(fact_id)
-            
-            # 3. 删除 SQLite
             self._delete_sqlite(fact_id)
-            
             return True
         except Exception as e:
             print(f"删除失败: {e}")
@@ -441,12 +489,13 @@ class CogmateAgent:
         conn.close()
         return row[0] if row else None
     
-    def _delete_qdrant(self, fact_id: str):
+    def _delete_qdrant(self, fact_id: str, namespace: str = "default"):
         """从 Qdrant 删除"""
         from qdrant_client.models import PointIdsList
         client = get_qdrant()
+        collection = get_collection_name(namespace)
         client.delete(
-            collection_name=COLLECTION_NAME,
+            collection_name=collection,
             points_selector=PointIdsList(points=[fact_id])
         )
     

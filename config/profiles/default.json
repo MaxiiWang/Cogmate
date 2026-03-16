@@ -1,0 +1,19 @@
+{
+  "namespace": "default",
+  "type": "human",
+  "identity": {
+    "name": "Max",
+    "title": "知识探索者",
+    "bio": "一个三层架构的个人知识管理系统，将碎片化想法持久化并发现知识间的隐藏关联。",
+    "avatar": ""
+  },
+  "preferences": {
+    "default_content_type": "观点",
+    "default_emotion": "中性",
+    "auto_discover_relations": true,
+    "challenge_detection": true,
+    "daily_report_enabled": true,
+    "daily_report_time": "20:00",
+    "weekly_report_day": "sunday"
+  }
+}

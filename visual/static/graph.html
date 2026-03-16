@@ -121,7 +121,7 @@
     </div>
 
     <div class="top-bar">
-        <a href="/" class="logo" style="text-decoration:none">🧠 <span>Brain</span> Visual</a>
+        <a id="homeLink" href="/" class="logo" style="text-decoration:none">🧠 <span>Brain</span> Visual</a>
         <div class="nav-tabs">
             <a class="nav-tab active" href="#">🕸️ Graph</a>
             <a class="nav-tab" id="treeLink" href="#">🌳 Tree</a>
@@ -184,6 +184,7 @@
         const params = new URLSearchParams(window.location.search);
         const TOKEN = params.get('token');
         const FOCUS_ID = params.get('focus');
+        const NAMESPACE = params.get('ns') || 'default';
         let isFullAccess = false;
 
         const TYPE_COLORS = {
@@ -203,7 +204,7 @@
             } catch (e) { console.error('Auth check failed:', e); }
         }
 
-        document.querySelector('.logo').href = '/?token=' + TOKEN;
+        document.querySelector('.logo').href = `/?token=${TOKEN}${NAMESPACE !== 'default' ? '&ns=' + NAMESPACE : ''}`;
         document.getElementById('treeLink').href = `/tree?token=${TOKEN}`;
         document.getElementById('timelineLink').href = `/timeline?token=${TOKEN}`;
 
@@ -214,7 +215,11 @@
         let zoom;
 
         async function api(endpoint) {
-            const res = await fetch(`${API_BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${TOKEN}`);
+            let url = `${API_BASE}${endpoint}${endpoint.includes('?') ? '&' : '?'}token=${TOKEN}`;
+            if (NAMESPACE !== 'default') {
+                url += `&ns=${NAMESPACE}`;
+            }
+            const res = await fetch(url);
             if (!res.ok) throw new Error('API Error');
             return res.json();
         }

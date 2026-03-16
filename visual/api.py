@@ -58,13 +58,15 @@ class TokenInfo(BaseModel):
     access_count: int
     qa_limit: int = 0
     qa_count: int = 0
+    namespace: str = "default"
 
 
 async def verify_token(
     token: str = Query(None, description="访问 Token"),
+    ns: str = Query("default", description="Namespace"),
     request: Request = None
 ) -> TokenInfo:
-    """Token 验证依赖"""
+    """Token 验证依赖（含 namespace 校验）"""
     if not token:
         raise HTTPException(status_code=401, detail="Token required")
     
@@ -75,7 +77,8 @@ async def verify_token(
     if request:
         client_ip = request.client.host if request.client else None
     
-    valid, info = vt(token, client_ip)
+    # 校验 token 并检查 namespace 绑定
+    valid, info = vt(token, client_ip, namespace=ns)
     
     if not valid:
         error = info.get('error', 'invalid_token')
@@ -83,6 +86,8 @@ async def verify_token(
             raise HTTPException(status_code=401, detail="Token expired")
         elif error == 'token_revoked':
             raise HTTPException(status_code=401, detail="Token revoked")
+        elif error == 'namespace_mismatch':
+            raise HTTPException(status_code=403, detail=info.get('message', 'Namespace mismatch'))
         else:
             raise HTTPException(status_code=401, detail="Invalid token")
     
@@ -177,9 +182,24 @@ async def public_info():
 
 
 @app.get("/api/public/profile")
-async def get_profile():
-    """获取个人资料（公开）"""
+async def get_profile(ns: str = "default"):
+    """获取个人资料（公开，支持 namespace）"""
     try:
+        # 先尝试从 namespace profile 获取
+        from profile_manager import ProfileManager
+        pm = ProfileManager()
+        ns_config = pm.load_profile_config(ns)
+        
+        if ns_config and ns_config.get("identity"):
+            identity = ns_config["identity"]
+            return {
+                "name": identity.get("name", ""),
+                "title": identity.get("title", ""),
+                "bio": identity.get("bio", ""),
+                "avatar": identity.get("avatar", "")
+            }
+        
+        # fallback 到默认 profile 表
         import sqlite3
         conn = sqlite3.connect(SQLITE_PATH)
         cursor = conn.cursor()
@@ -188,6 +208,7 @@ async def get_profile():
         conn.close()
         return {row[0]: row[1] for row in rows}
     except Exception as e:
+        logger.error(f"获取 profile 失败: {e}")
         return {"name": "", "title": "", "bio": "", "avatar": ""}
 
 
@@ -334,14 +355,15 @@ async def auth_verify(token: str = Query(...)):
 
 
 @app.get("/api/visual/stats")
-async def get_stats(token_info: TokenInfo = Depends(verify_token)):
+async def get_stats(token_info: TokenInfo = Depends(verify_token), ns: str = "default"):
     """获取统计概览"""
     from cogmate_core import CogmateAgent
-    
-    cogmate = CogmateAgent()
+
+    cogmate = CogmateAgent(namespace=ns)
     stats = cogmate.stats()
-    
+
     return {
+        "namespace": ns,
         "total_facts": stats["total_facts"],
         "graph_nodes": stats["graph_nodes"],
         "graph_edges": stats["graph_edges"],
@@ -351,14 +373,15 @@ async def get_stats(token_info: TokenInfo = Depends(verify_token)):
 
 
 @app.get("/api/visual/health")
-async def get_health(token_info: TokenInfo = Depends(verify_token)):
+async def get_health(token_info: TokenInfo = Depends(verify_token), ns: str = "default"):
     """获取健康度数据"""
     from graph_health import get_graph_metrics, evaluate_health
-    
+
     metrics = get_graph_metrics()
     health = evaluate_health(metrics)
-    
+
     return {
+        "namespace": ns,
         "metrics": metrics,
         "health": health
     }
@@ -373,7 +396,7 @@ async def health_check():
 
 
 @app.get("/api/hub/profile")
-async def get_hub_profile():
+async def get_hub_profile(ns: str = "default"):
     """获取 Hub 集成所需的个人资料"""
     try:
         import sqlite3
@@ -383,17 +406,33 @@ async def get_hub_profile():
         rows = cursor.fetchall()
         conn.close()
         profile = {row[0]: row[1] for row in rows}
-        
-        # 获取统计信息
-        cursor = get_sqlite().cursor()
-        cursor.execute("SELECT COUNT(*) FROM facts")
-        fact_count = cursor.fetchone()[0]
-        
+
+        # 获取统计信息（按 namespace 过滤）
+        conn2 = get_sqlite()
+        cursor2 = conn2.cursor()
+        cursor2.execute("SELECT COUNT(*) FROM facts WHERE namespace = ?", (ns,))
+        fact_count = cursor2.fetchone()[0]
+        conn2.close()
+
+        # 尝试获取 namespace profile
+        ns_profile = {}
+        identity = {}
+        try:
+            from profile_manager import ProfileManager
+            pm = ProfileManager()
+            ns_data = pm.load_profile_config(ns)
+            if ns_data:
+                ns_profile = ns_data
+                identity = ns_data.get("identity", {})
+        except Exception as e:
+            logger.warning(f"加载 namespace profile 失败: {e}")
+
         return {
-            "name": profile.get("name", ""),
-            "title": profile.get("title", ""),
-            "bio": profile.get("bio", ""),
-            "avatar": profile.get("avatar", ""),
+            "namespace": ns,
+            "name": identity.get("name") or profile.get("name", ""),
+            "title": identity.get("title") or profile.get("title", ""),
+            "bio": identity.get("bio") or profile.get("bio", ""),
+            "avatar": identity.get("avatar") or profile.get("avatar", ""),
             "stats": {
                 "facts": fact_count
             },
@@ -402,6 +441,176 @@ async def get_hub_profile():
     except Exception as e:
         logger.error(f"获取 Hub profile 失败: {e}")
         return {"name": "", "title": "", "bio": "", "avatar": "", "stats": {}, "api_version": "1.0"}
+
+
+@app.get("/api/hub/profiles")
+async def list_hub_profiles():
+    """列出所有可发布的角色（供 CogNexus 使用）"""
+    try:
+        from profile_manager import ProfileManager
+        pm = ProfileManager()
+        profiles = pm.list_profiles()
+        
+        result = []
+        for p in profiles:
+            # 获取每个角色的知识库统计
+            conn = get_sqlite()
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM facts WHERE namespace = ?", (p["namespace"],))
+            fact_count = cursor.fetchone()[0]
+            conn.close()
+            
+            # 从 identity 中读取 name 和 title
+            identity = p.get("identity", {})
+            
+            result.append({
+                "namespace": p["namespace"],
+                "type": p["type"],
+                "name": identity.get("name", p["namespace"]),
+                "title": identity.get("title", ""),
+                "avatar": identity.get("avatar", ""),
+                "fact_count": fact_count
+            })
+        
+        return {"profiles": result, "total": len(result)}
+    except Exception as e:
+        logger.error(f"列出角色失败: {e}")
+        return {"profiles": [], "total": 0, "error": str(e)}
+
+
+class PublishRequest(BaseModel):
+    namespace: str
+    cognexus_url: str
+    username: str
+    password: str
+    token_config: dict = {
+        "count": 10,
+        "scope": "qa_public",
+        "duration": "30d",
+        "unit_price": 5
+    }
+
+
+@app.post("/api/hub/publish")
+async def publish_to_cognexus(request: PublishRequest):
+    """发布角色到 CogNexus"""
+    import httpx
+    from profile_manager import ProfileManager
+    from visual_token import generate_token
+    
+    ns = request.namespace
+    
+    # 1. 获取角色信息
+    pm = ProfileManager()
+    profiles = pm.list_profiles()
+    profile_data = None
+    for p in profiles:
+        if p["namespace"] == ns:
+            identity = p.get("identity", {})
+            profile_data = {
+                "name": identity.get("name", ns),
+                "title": identity.get("title", ""),
+                "type": p["type"],
+                "avatar": identity.get("avatar", ""),
+                "bio": identity.get("bio", identity.get("title", ""))
+            }
+            break
+    
+    if not profile_data:
+        return {"success": False, "error": f"角色 {ns} 不存在"}
+    
+    # 获取知识库统计
+    conn = get_sqlite()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM facts WHERE namespace = ?", (ns,))
+    fact_count = cursor.fetchone()[0]
+    conn.close()
+    profile_data["fact_count"] = fact_count
+    
+    # 2. 登录 CogNexus
+    cognexus_url = request.cognexus_url.rstrip("/")
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # 登录获取 token
+            login_res = await client.post(
+                f"{cognexus_url}/api/auth/login",
+                json={"username": request.username, "password": request.password}
+            )
+            if login_res.status_code != 200:
+                return {"success": False, "error": "CogNexus 登录失败，请检查用户名密码"}
+            
+            login_data = login_res.json()
+            cog_token = login_data.get("token")
+            if not cog_token:
+                return {"success": False, "error": "CogNexus 登录失败，未获取到 token"}
+            
+            # 3. 创建 Tokens
+            token_config = request.token_config
+            count = token_config.get("count", 10)
+            scope = token_config.get("scope", "qa_public")
+            duration = token_config.get("duration", "30d")
+            unit_price = token_config.get("unit_price", 5)
+            
+            # 根据 scope 设置 qa_limit
+            qa_limit = 20 if scope == "qa_public" else -1
+            
+            tokens = []
+            for _ in range(count):
+                result = generate_token(
+                    scope=scope,
+                    duration=duration,
+                    namespace=ns
+                )
+                # generate_token 直接返回 {token, expires_at, ...}
+                if result and result.get("token"):
+                    tokens.append({
+                        "value": result["token"],
+                        "scope": scope,
+                        "qa_limit": qa_limit,
+                        "unit_price": unit_price
+                    })
+            
+            if not tokens:
+                return {"success": False, "error": "Token 创建失败"}
+            
+            # 4. 推送到 CogNexus
+            # 获取本机地址
+            import socket
+            local_ip = socket.gethostbyname(socket.gethostname())
+            source_url = f"http://{local_ip}:8000"
+            # 优先使用配置的外部地址
+            # TODO: 从配置读取
+            source_url = "http://124.221.254.71:8000"
+            
+            import_res = await client.post(
+                f"{cognexus_url}/api/agents/import",
+                headers={"Authorization": f"Bearer {cog_token}"},
+                json={
+                    "source_url": source_url,
+                    "namespace": ns,
+                    "profile": profile_data,
+                    "tokens": tokens
+                }
+            )
+            
+            if import_res.status_code != 200:
+                return {"success": False, "error": f"推送失败: {import_res.text}"}
+            
+            import_data = import_res.json()
+            
+            return {
+                "success": True,
+                "agent_id": import_data.get("agent_id"),
+                "agent_url": f"{cognexus_url}{import_data.get('agent_url', '')}",
+                "tokens_created": len(tokens),
+                "created": import_data.get("created", True)
+            }
+            
+    except httpx.RequestError as e:
+        return {"success": False, "error": f"网络错误: {str(e)}"}
+    except Exception as e:
+        logger.error(f"发布失败: {e}")
+        return {"success": False, "error": str(e)}
 
 
 @app.get("/api/hub/token/validate")
@@ -455,39 +664,41 @@ async def validate_hub_token(token: str = Query(..., description="要验证的 T
 async def get_graph(
     token_info: TokenInfo = Depends(verify_token),
     limit: int = Query(500, ge=1, le=1000),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    ns: str = "default"
 ):
     """获取图谱数据（根据 scope 过滤私有内容）"""
     if not can_browse(token_info):
         raise HTTPException(status_code=403, detail="Browse permission required")
-    
+
     from neo4j import GraphDatabase
-    
+
     include_private = can_see_private(token_info)
-    
+
     # 如果需要过滤，获取私有 fact_ids
     private_ids = set() if include_private else get_private_fact_ids()
-    
+
     driver = GraphDatabase.driver(
         NEO4J_URI,
         auth=(NEO4J_USER, NEO4J_PASSWORD)
     )
-    
+
     nodes = []
     edges = []
-    
+
     with driver.session() as session:
-        # 获取节点
+        # 获取节点（按 namespace 过滤）
         node_result = session.run('''
             MATCH (f:Fact)
+            WHERE f.namespace = $namespace
             OPTIONAL MATCH (f)-[r]-()
             WITH f, count(r) as degree
-            RETURN f.fact_id as id, f.summary as label, 
+            RETURN f.fact_id as id, f.summary as label,
                    f.content_type as type, f.timestamp as timestamp,
                    degree
             ORDER BY f.timestamp DESC
             SKIP $offset LIMIT $limit
-        ''', offset=offset, limit=limit)
+        ''', offset=offset, limit=limit, namespace=ns)
         
         for record in node_result:
             # 跳过私有节点
@@ -503,12 +714,13 @@ async def get_graph(
                 "degree": record["degree"]
             })
         
-        # 获取边（过滤涉及私有节点的边）
+        # 获取边（按 namespace 过滤，过滤涉及私有节点的边）
         edge_result = session.run('''
             MATCH (a:Fact)-[r]->(b:Fact)
+            WHERE a.namespace = $namespace AND b.namespace = $namespace
             RETURN a.fact_id as source, b.fact_id as target,
                    type(r) as type, r.confidence as confidence
-        ''')
+        ''', namespace=ns)
         
         for record in edge_result:
             # 跳过涉及私有节点的边
@@ -538,12 +750,13 @@ async def get_graph(
 @app.get("/api/visual/graph/node/{node_id}")
 async def get_node(
     node_id: str,
-    token_info: TokenInfo = Depends(verify_token)
+    token_info: TokenInfo = Depends(verify_token),
+    ns: str = "default"
 ):
     """获取单个节点详情"""
     from cogmate_core import CogmateAgent
-    
-    cogmate = CogmateAgent()
+
+    cogmate = CogmateAgent(namespace=ns)
     fact = cogmate.get_fact(node_id)
     
     if not fact:
@@ -559,7 +772,7 @@ async def get_node(
 
 
 @app.get("/api/visual/tree")
-async def get_tree(token_info: TokenInfo = Depends(verify_token)):
+async def get_tree(token_info: TokenInfo = Depends(verify_token), ns: str = "default"):
     """获取抽象层树形结构（根据 scope 过滤私有内容）"""
     if not can_browse(token_info):
         raise HTTPException(status_code=403, detail="Browse permission required")
@@ -568,7 +781,7 @@ async def get_tree(token_info: TokenInfo = Depends(verify_token)):
     import sqlite3
     
     include_private = can_see_private(token_info)
-    abstracts = list_abstracts()
+    abstracts = list_abstracts(namespace=ns)
     
     # 过滤私有抽象层
     if not include_private:
@@ -597,7 +810,8 @@ async def get_timeline(
     token_info: TokenInfo = Depends(verify_token),
     start: str = Query(None),
     end: str = Query(None),
-    granularity: str = Query("day")
+    granularity: str = Query("day"),
+    ns: str = "default"
 ):
     """获取时间线数据（根据 scope 过滤私有内容）"""
     if not can_browse(token_info):
@@ -616,17 +830,18 @@ async def get_timeline(
         query = '''
             SELECT fact_id, summary, content_type, timestamp, created_at
             FROM facts
+            WHERE namespace = ?
             ORDER BY created_at DESC
         '''
-        cursor.execute(query)
+        cursor.execute(query, (ns,))
     else:
         query = '''
             SELECT fact_id, summary, content_type, timestamp, created_at
             FROM facts
-            WHERE is_private = 0
+            WHERE is_private = 0 AND namespace = ?
             ORDER BY created_at DESC
         '''
-        cursor.execute(query)
+        cursor.execute(query, (ns,))
     
     facts = []
     for row in cursor.fetchall():
@@ -749,7 +964,8 @@ class AskResponse(BaseModel):
 @app.post("/api/ask", response_model=AskResponse)
 async def ask(
     request: AskRequest,
-    token_info: TokenInfo = Depends(verify_token)
+    token_info: TokenInfo = Depends(verify_token),
+    ns: str = "default"
 ):
     """
     问答服务 API
@@ -776,7 +992,7 @@ async def ask(
             detail=f"Q&A limit exceeded. This token allows {limit} questions."
         )
     
-    cogmate = CogmateAgent()
+    cogmate = CogmateAgent(namespace=ns)
     
     # 根据 scope 决定是否过滤私有内容
     include_private = can_see_private(token_info)
@@ -823,9 +1039,9 @@ async def ask(
             qa_remaining=new_remaining
         )
     
-    # 使用 LLM 生成回答
+    # 使用 LLM 生成回答（传入 namespace 用于 persona 注入）
     from llm_answer import generate_answer
-    answer = generate_answer(request.question, vector_results)
+    answer = generate_answer(request.question, vector_results, namespace=ns)
     
     # 增加问答计数
     increment_qa_count(token_info.token)
@@ -842,11 +1058,12 @@ async def ask(
 @app.get("/api/ask")
 async def ask_get(
     q: str = Query(..., description="问题"),
-    token_info: TokenInfo = Depends(verify_token)
+    token_info: TokenInfo = Depends(verify_token),
+    ns: str = "default"
 ):
     """GET 方式问答（便于测试）"""
     request = AskRequest(question=q)
-    return await ask(request, token_info)
+    return await ask(request, token_info, ns=ns)
 
 
 from fastapi.responses import StreamingResponse
@@ -855,7 +1072,8 @@ from fastapi.responses import StreamingResponse
 @app.get("/api/ask/stream")
 async def ask_stream(
     q: str = Query(..., description="问题"),
-    token_info: TokenInfo = Depends(verify_token)
+    token_info: TokenInfo = Depends(verify_token),
+    ns: str = "default"
 ):
     """流式问答 API（Server-Sent Events）"""
     if not can_ask(token_info):
@@ -876,7 +1094,7 @@ async def ask_stream(
             yield f"data: {json.dumps({'error': 'limit_exceeded', 'message': f'问答次数已用完（限制 {limit} 次）'})}\n\n"
         return StreamingResponse(error_stream(), media_type="text/event-stream")
     
-    cogmate = CogmateAgent()
+    cogmate = CogmateAgent(namespace=ns)
     include_private = can_see_private(token_info)
     
     # 语义搜索
@@ -916,9 +1134,9 @@ async def ask_stream(
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
             return
         
-        # 流式生成回答
+        # 流式生成回答（传入 namespace 用于 persona 注入）
         try:
-            stream_gen = generate_answer(q, vector_results, stream=True)
+            stream_gen = generate_answer(q, vector_results, stream=True, namespace=ns)
             for chunk in stream_gen:
                 yield f"data: {json.dumps({'type': 'content', 'text': chunk})}\n\n"
         except Exception as e:
@@ -1032,16 +1250,19 @@ class CreateTokenRequest(BaseModel):
 
 @app.get("/api/tokens")
 async def list_tokens_api(
-    token_info: TokenInfo = Depends(verify_token)
+    token_info: TokenInfo = Depends(verify_token),
+    ns: str = "default"
 ):
-    """列出所有 Token（仅 full 权限）"""
+    """列出当前 namespace 的 Token（仅 full 权限）"""
     if not can_see_private(token_info):
         raise HTTPException(status_code=403, detail="Full access required")
     
     from visual_token import list_tokens, get_qa_stats, get_visual_url
     
-    tokens = list_tokens()
+    # 只返回当前 namespace 的 token
+    tokens = list_tokens(namespace=ns)
     result = []
+    ns_param = f"&ns={ns}" if ns != "default" else ""
     for t in tokens:
         qa_stats = get_qa_stats(t['token_full'])
         result.append({
@@ -1053,21 +1274,23 @@ async def list_tokens_api(
             'expires_at': t['expires_at'],
             'access_count': t['access_count'],
             'note': t['note'],
+            'namespace': t.get('namespace', 'default'),
             'qa_limit': qa_stats.get('limit', 0),
             'qa_used': qa_stats.get('used', 0),
             'qa_unlimited': qa_stats.get('unlimited', False),
-            'url': get_visual_url(t['token_full'])
+            'url': get_visual_url(t['token_full']) + ns_param
         })
     
-    return {"tokens": result}
+    return {"tokens": result, "namespace": ns}
 
 
 @app.post("/api/tokens")
 async def create_token_api(
     request: CreateTokenRequest,
-    token_info: TokenInfo = Depends(verify_token)
+    token_info: TokenInfo = Depends(verify_token),
+    ns: str = "default"
 ):
-    """创建新 Token（仅 full 权限）"""
+    """创建新 Token（仅 full 权限，绑定当前 namespace）"""
     if not can_see_private(token_info):
         raise HTTPException(status_code=403, detail="Full access required")
     
@@ -1078,13 +1301,16 @@ async def create_token_api(
     if request.scope not in valid_scopes:
         raise HTTPException(status_code=400, detail=f"Invalid scope. Must be one of: {valid_scopes}")
     
+    # 创建 token 时绑定到当前 namespace
     result = generate_token(
         duration=request.duration,
         scope=request.scope,
         qa_limit=request.qa_limit,
-        note=request.note
+        note=request.note,
+        namespace=ns
     )
     
+    ns_param = f"&ns={ns}" if ns != "default" else ""
     return {
         'success': True,
         'token': result['token'],
@@ -1092,7 +1318,8 @@ async def create_token_api(
         'scope_label': result['scope_label'],
         'expires_at': result['expires_at'],
         'qa_limit': result['qa_limit'],
-        'url': get_visual_url(result['token'])
+        'namespace': ns,
+        'url': get_visual_url(result['token']) + ns_param
     }
 
 
@@ -1133,6 +1360,269 @@ async def action(
     
     else:
         raise HTTPException(status_code=400, detail=f"Unknown action: {request.action}")
+
+
+# ==================== Profile/Namespace 管理 ====================
+
+@app.get("/api/profiles")
+async def list_profiles_api(
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """列出所有 Profiles/Namespaces（仅 default namespace 的 full 权限）"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+    
+    from profile_manager import ProfileManager
+    from cogmate_core import CogmateAgent
+    
+    pm = ProfileManager()
+    profiles = pm.list_profiles()
+    
+    result = []
+    for p in profiles:
+        # 获取每个 namespace 的统计
+        try:
+            cogmate = CogmateAgent(namespace=p['namespace'])
+            stats = cogmate.stats()
+            fact_count = stats.get('total_facts', 0)
+        except:
+            fact_count = 0
+        
+        identity = p.get('identity', {})
+        result.append({
+            'namespace': p['namespace'],
+            'type': p['type'],
+            'name': identity.get('name', p['namespace']),
+            'title': identity.get('title', ''),
+            'created_at': p.get('created_at', ''),
+            'last_active': p.get('last_active', ''),
+            'fact_count': fact_count
+        })
+    
+    return {"profiles": result}
+
+
+class CreateProfileRequest(BaseModel):
+    namespace: str
+    type: str = "character"
+    name: str = ""
+    title: str = ""
+    bio: str = ""
+
+
+@app.post("/api/profiles")
+async def create_profile_api(
+    request: CreateProfileRequest,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """创建新 Profile/Namespace（仅 default namespace 的 full 权限）"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+    
+    from profile_manager import ProfileManager
+    
+    pm = ProfileManager()
+    
+    # 构建配置
+    config = {
+        "identity": {
+            "name": request.name or request.namespace,
+            "title": request.title,
+            "bio": request.bio,
+            "avatar": ""
+        }
+    }
+    
+    success = pm.create_profile(
+        namespace=request.namespace,
+        profile_type=request.type,
+        config=config
+    )
+    
+    if success:
+        # 更新配置文件
+        full_config = pm.load_profile_config(request.namespace)
+        if full_config:
+            full_config["identity"] = config["identity"]
+            pm.save_profile_config(request.namespace, full_config)
+        
+        return {"success": True, "namespace": request.namespace}
+    else:
+        raise HTTPException(status_code=400, detail="创建失败，可能 namespace 已存在或格式无效")
+
+
+@app.get("/api/profiles/{namespace}")
+async def get_profile_api(
+    namespace: str,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """获取单个 Profile 详情"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+    
+    from profile_manager import ProfileManager
+    
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    return config
+
+
+class UpdateProfileRequest(BaseModel):
+    name: str = None
+    title: str = None
+    bio: str = None
+    persona: dict = None
+
+
+@app.put("/api/profiles/{namespace}")
+async def update_profile_api(
+    namespace: str,
+    request: UpdateProfileRequest,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """更新 Profile"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+    
+    from profile_manager import ProfileManager
+    
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    # 更新 identity
+    if "identity" not in config:
+        config["identity"] = {}
+    
+    if request.name is not None:
+        config["identity"]["name"] = request.name
+    if request.title is not None:
+        config["identity"]["title"] = request.title
+    if request.bio is not None:
+        config["identity"]["bio"] = request.bio
+    
+    # 更新 persona（仅 character 类型）
+    if request.persona and config.get("type") == "character":
+        if "persona" not in config:
+            config["persona"] = {}
+        config["persona"].update(request.persona)
+    
+    pm.save_profile_config(namespace, config)
+    
+    return {"success": True}
+
+
+@app.delete("/api/profiles/{namespace}")
+async def delete_profile_api(
+    namespace: str,
+    delete_data: bool = False,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """删除 Profile（谨慎！）"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+    
+    if namespace == "default":
+        raise HTTPException(status_code=400, detail="不能删除 default profile")
+    
+    from profile_manager import ProfileManager
+    
+    pm = ProfileManager()
+    success = pm.delete_profile(namespace, delete_data=delete_data)
+    
+    if success:
+        return {"success": True}
+    else:
+        raise HTTPException(status_code=400, detail="删除失败")
+
+
+@app.get("/api/profiles/{namespace}/tokens")
+async def list_profile_tokens_api(
+    namespace: str,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """获取指定 namespace 的 Token 列表（仅 default namespace 的 full 权限）"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+    
+    from visual_token import list_tokens, get_qa_stats, get_visual_url
+    
+    tokens = list_tokens(namespace=namespace)
+    result = []
+    ns_param = f"&ns={namespace}" if namespace != "default" else ""
+    
+    for t in tokens:
+        qa_stats = get_qa_stats(t['token_full'])
+        result.append({
+            'token_short': t['token'],
+            'token_full': t['token_full'],
+            'scope': t['scope'],
+            'scope_label': t['scope_label'],
+            'expires_at': t['expires_at'],
+            'url': get_visual_url(t['token_full']) + ns_param
+        })
+    
+    return {"tokens": result, "namespace": namespace}
+
+
+class CreateProfileTokenRequest(BaseModel):
+    scope: str = "full"
+    duration: str = "30d"
+
+
+@app.post("/api/profiles/{namespace}/token")
+async def create_profile_token_api(
+    namespace: str,
+    request: CreateProfileTokenRequest,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """为指定 namespace 创建 Token（仅 default namespace 的 full 权限）"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+    
+    from profile_manager import ProfileManager
+    from visual_token import generate_token, get_visual_url
+    
+    pm = ProfileManager()
+    if not pm.get_profile(namespace):
+        raise HTTPException(status_code=404, detail="Profile not found")
+    
+    result = generate_token(
+        duration=request.duration,
+        scope=request.scope,
+        namespace=namespace,
+        note=f"从 default 创建"
+    )
+    
+    ns_param = f"&ns={namespace}" if namespace != "default" else ""
+    return {
+        'success': True,
+        'token': result['token'],
+        'namespace': namespace,
+        'scope': result['scope'],
+        'expires_at': result['expires_at'],
+        'url': get_visual_url(result['token']) + ns_param
+    }
 
 
 # ==================== 启动 ====================

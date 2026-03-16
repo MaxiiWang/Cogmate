@@ -600,6 +600,83 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
+        /* 角色管理 */
+        .profile-management { display: none !important; margin-top: 20px; }
+        .profile-management.show { display: block !important; }
+        .profile-create-form {
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+        .profile-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .profile-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-s);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            transition: all 0.2s;
+        }
+        .profile-item:hover {
+            border-color: var(--accent);
+            background: rgba(212, 160, 84, 0.03);
+        }
+        .profile-info { flex: 1; }
+        .profile-name {
+            font-weight: 600;
+            color: var(--text-1);
+            font-size: 0.95em;
+        }
+        .profile-meta {
+            color: var(--text-3);
+            font-size: 0.8em;
+            margin-top: 4px;
+        }
+        .profile-type {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .profile-type.character { background: rgba(157, 139, 184, 0.2); color: var(--purple); }
+        .profile-type.human { background: rgba(109, 168, 155, 0.2); color: var(--teal); }
+        .profile-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .profile-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border-m);
+            border-radius: 5px;
+            background: transparent;
+            color: var(--text-2);
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .profile-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .profile-btn.primary {
+            background: var(--accent);
+            color: var(--bg);
+            border-color: var(--accent);
+        }
+        .profile-btn.danger:hover {
+            border-color: var(--rose);
+            color: var(--rose);
+        }
+
         /* Token 管理 */
         .token-management { display: none; margin-top: 20px; }
         .token-management.show { display: block; }
@@ -855,6 +932,56 @@
             </div>
         </div>
 
+        <!-- 发布到 CogNexus 弹窗 -->
+        <div class="modal-overlay" id="publishModal">
+            <div class="modal-content" style="max-width: 420px;">
+                <div class="modal-header">
+                    <h3>📤 发布到 CogNexus</h3>
+                    <button class="modal-close" onclick="closePublishModal()">×</button>
+                </div>
+                <div class="form-group">
+                    <label>角色</label>
+                    <input type="text" id="publishNamespace" readonly style="background: var(--bg-secondary);">
+                </div>
+                <div class="form-group" style="display: none;">
+                    <input type="hidden" id="publishCognexusUrl" value="https://wielding.ai">
+                </div>
+                <div class="form-group">
+                    <label>CogNexus 用户名</label>
+                    <input type="text" id="publishUsername" placeholder="你的 CogNexus 用户名">
+                </div>
+                <div class="form-group">
+                    <label>CogNexus 密码</label>
+                    <input type="password" id="publishPassword" placeholder="密码">
+                </div>
+                <hr style="border: none; border-top: 1px solid var(--text-3); margin: 16px 0;">
+                <div class="form-group">
+                    <label>Token 配置</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="font-size: 0.8em;">创建数量</label>
+                            <input type="number" id="publishTokenCount" value="10" min="1" max="100" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.8em;">单价 (ATP)</label>
+                            <input type="number" id="publishTokenPrice" value="5" min="1" style="width: 100%;">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label style="font-size: 0.8em;">类型</label>
+                    <select id="publishTokenScope" style="width: 100%;">
+                        <option value="qa_public">💬 问答服务 (20次问答)</option>
+                        <option value="full">🔓 全量访问 (无限制)</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="closePublishModal()">取消</button>
+                    <button class="btn-save" id="publishBtn" onclick="doPublish()">发布</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Token Input -->
         <div class="token-section animate-in delay-1" id="tokenSection">
             <h3>输入访问 Token</h3>
@@ -955,6 +1082,38 @@
             </div>
         </div>
 
+        <!-- 角色管理（仅 default namespace 显示） -->
+        <div class="profile-management" id="profileManagement">
+            <div class="section-label">🎭 角色管理</div>
+            <div class="profile-create-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Namespace</label>
+                        <input type="text" id="newProfileNamespace" placeholder="英文标识，如 sage">
+                    </div>
+                    <div class="form-group">
+                        <label>类型</label>
+                        <select id="newProfileType">
+                            <option value="character">🎭 角色</option>
+                            <option value="human">👤 人类</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>名称</label>
+                        <input type="text" id="newProfileName" placeholder="显示名称">
+                    </div>
+                    <div class="form-group">
+                        <label>标题</label>
+                        <input type="text" id="newProfileTitle" placeholder="一句话介绍">
+                    </div>
+                </div>
+                <button class="create-btn" onclick="createProfile()">创建角色</button>
+            </div>
+            <div class="profile-list" id="profileList">
+                <div class="loading"><div class="spinner"></div>加载中...</div>
+            </div>
+        </div>
+
         <!-- Token 管理 -->
         <div class="token-management" id="tokenManagement">
             <div class="section-label">Token 管理</div>
@@ -1006,14 +1165,73 @@
 
     <script>
         const API_BASE = window.location.origin;
+        
+        // Namespace 支持
+        const urlParams = new URLSearchParams(window.location.search);
+        const NAMESPACE = urlParams.get('ns') || 'default';
+        
+        function apiUrl(endpoint, params = {}) {
+            const url = new URL(endpoint, API_BASE);
+            if (NAMESPACE !== 'default') {
+                url.searchParams.set('ns', NAMESPACE);
+            }
+            for (const [key, value] of Object.entries(params)) {
+                url.searchParams.set(key, value);
+            }
+            return url.toString();
+        }
 
         const TokenManager = {
-            KEY: 'brain_token',
-            INFO_KEY: 'brain_token_info',
-            get() { return sessionStorage.getItem(this.KEY); },
-            getInfo() { const i = sessionStorage.getItem(this.INFO_KEY); return i ? JSON.parse(i) : null; },
-            set(token, info) { sessionStorage.setItem(this.KEY, token); sessionStorage.setItem(this.INFO_KEY, JSON.stringify(info)); },
-            clear() { sessionStorage.removeItem(this.KEY); sessionStorage.removeItem(this.INFO_KEY); },
+            STORAGE_KEY: 'cogmate_tokens',  // 存储所有 namespace 的 token
+            
+            // 获取所有存储的 tokens
+            _getAll() {
+                const data = localStorage.getItem(this.STORAGE_KEY);
+                return data ? JSON.parse(data) : {};
+            },
+            
+            // 保存所有 tokens
+            _saveAll(data) {
+                localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+            },
+            
+            // 获取当前 namespace 的 token
+            get() {
+                const all = this._getAll();
+                return all[NAMESPACE]?.token || null;
+            },
+            
+            // 获取当前 namespace 的 token info
+            getInfo() {
+                const all = this._getAll();
+                return all[NAMESPACE]?.info || null;
+            },
+            
+            // 设置当前 namespace 的 token
+            set(token, info) {
+                const all = this._getAll();
+                all[NAMESPACE] = { token, info, updatedAt: new Date().toISOString() };
+                this._saveAll(all);
+            },
+            
+            // 清除当前 namespace 的 token
+            clear() {
+                const all = this._getAll();
+                delete all[NAMESPACE];
+                this._saveAll(all);
+            },
+            
+            // 获取指定 namespace 的 token（用于跨 namespace 切换）
+            getFor(ns) {
+                const all = this._getAll();
+                return all[ns]?.token || null;
+            },
+            
+            // 列出所有已保存的 namespaces
+            listNamespaces() {
+                return Object.keys(this._getAll());
+            },
+            
             getScope() { return this.getInfo()?.scope || 'none'; },
             canChat() { return ['full', 'qa_public'].includes(this.getScope()); },
             canBrowse() { return ['full', 'browse_public'].includes(this.getScope()); }
@@ -1036,7 +1254,12 @@
                 if (data.valid) {
                     TokenManager.set(token, data);
                     updateUI(data);
-                    if (location.search.includes('token=')) history.replaceState({}, '', location.pathname);
+                    // 清除 URL 中的 token 参数，但保留 ns 参数
+                    if (location.search.includes('token=')) {
+                        const newUrl = new URL(window.location.href);
+                        newUrl.searchParams.delete('token');
+                        history.replaceState({}, '', newUrl.pathname + newUrl.search);
+                    }
                 } else {
                     const msgs = { 'token_expired': 'Token 已过期', 'token_revoked': 'Token 已被撤销', 'token_not_found': 'Token 无效' };
                     showError(msgs[data.error] || 'Token 验证失败');
@@ -1081,7 +1304,7 @@
             if (permissions.chat) {
                 chatCard.classList.remove('locked');
                 chatCard.querySelector('.lock-badge').textContent = '✅';
-                chatCard.href = `/chat.html?token=${token}`;
+                chatCard.href = `/chat.html?token=${token}${NAMESPACE !== 'default' ? '&ns=' + NAMESPACE : ''}`;
                 const qaStats = authInfo.qa_stats;
                 if (qaStats && !qaStats.unlimited) {
                     document.getElementById('qaStats').style.display = 'flex';
@@ -1095,12 +1318,13 @@
             }
 
             const viewUrls = { 'graphCard': '/graph', 'treeCard': '/tree', 'timelineCard': '/timeline' };
+            const nsParam = NAMESPACE !== 'default' ? `&ns=${NAMESPACE}` : '';
             ['graphCard', 'treeCard', 'timelineCard'].forEach(id => {
                 const card = document.getElementById(id);
                 if (permissions.browse) {
                     card.classList.remove('locked');
                     card.querySelector('.lock-badge').textContent = '✅';
-                    card.href = `${viewUrls[id]}?token=${token}`;
+                    card.href = `${viewUrls[id]}?token=${token}${nsParam}`;
                 }
             });
 
@@ -1112,6 +1336,15 @@
                 document.getElementById('tokenManagement').classList.add('show');
                 document.getElementById('profileEditBtn').style.display = 'inline-block';
                 loadTokenList();
+                
+                // 仅在 default namespace 显示角色管理
+                if (NAMESPACE === 'default') {
+                    console.log('Loading profile management for default namespace');
+                    const pm = document.getElementById('profileManagement');
+                    console.log('profileManagement element:', pm);
+                    pm.classList.add('show');
+                    loadProfileList();
+                }
             }
             if (authInfo.valid) document.getElementById('tokenSection').style.display = 'none';
         }
@@ -1126,8 +1359,8 @@
         async function loadDashboardData(token, isFullAccess) {
             try {
                 const [stats, tree] = await Promise.all([
-                    fetch(`${API_BASE}/api/visual/stats?token=${token}`).then(r => r.json()),
-                    fetch(`${API_BASE}/api/visual/tree?token=${token}`).then(r => r.json())
+                    fetch(apiUrl('/api/visual/stats', {token})).then(r => r.json()),
+                    fetch(apiUrl('/api/visual/tree', {token})).then(r => r.json())
                 ]);
                 document.getElementById('totalFacts').textContent = stats.total_facts || 0;
                 document.getElementById('totalEdges').textContent = stats.graph_edges || 0;
@@ -1141,7 +1374,7 @@
         // Profile functions
         async function loadProfile() {
             try {
-                const res = await fetch(`${API_BASE}/api/public/profile`);
+                const res = await fetch(apiUrl('/api/public/profile'));
                 const profile = await res.json();
                 
                 document.getElementById('profileName').textContent = profile.name || '未设置';
@@ -1207,8 +1440,82 @@
         document.getElementById('editModal').addEventListener('click', function(e) {
             if (e.target === this) closeEditModal();
         });
+        document.getElementById('publishModal').addEventListener('click', function(e) {
+            if (e.target === this) closePublishModal();
+        });
+
+        // ========== 发布到 CogNexus ==========
+        
+        function openPublishModal(namespace, name) {
+            document.getElementById('publishNamespace').value = `${name} (${namespace})`;
+            document.getElementById('publishNamespace').dataset.ns = namespace;
+            document.getElementById('publishModal').classList.add('show');
+        }
+        
+        function closePublishModal() {
+            document.getElementById('publishModal').classList.remove('show');
+        }
+        
+        async function doPublish() {
+            const namespace = document.getElementById('publishNamespace').dataset.ns;
+            const cognexusUrl = document.getElementById('publishCognexusUrl').value.trim();
+            const username = document.getElementById('publishUsername').value.trim();
+            const password = document.getElementById('publishPassword').value;
+            const tokenCount = parseInt(document.getElementById('publishTokenCount').value) || 10;
+            const tokenPrice = parseInt(document.getElementById('publishTokenPrice').value) || 5;
+            const tokenScope = document.getElementById('publishTokenScope').value;
+            
+            if (!username || !password) {
+                alert('请输入 CogNexus 登录凭证');
+                return;
+            }
+            
+            const btn = document.getElementById('publishBtn');
+            btn.disabled = true;
+            btn.textContent = '发布中...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/hub/publish`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        namespace,
+                        cognexus_url: cognexusUrl,
+                        username,
+                        password,
+                        token_config: {
+                            count: tokenCount,
+                            scope: tokenScope,
+                            duration: '30d',
+                            unit_price: tokenPrice
+                        }
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    alert(`✅ 发布成功！\n\nAgent ID: ${data.agent_id}\n创建了 ${data.tokens_created} 个 Token\n\n${data.created ? '新建' : '更新'}完成`);
+                    closePublishModal();
+                    // 可选：打开 CogNexus 页面
+                    if (confirm('是否打开 CogNexus 查看？')) {
+                        window.open(data.agent_url, '_blank');
+                    }
+                } else {
+                    alert('❌ 发布失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('❌ 网络错误: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '发布';
+            }
+        }
 
         async function init() {
+            // Debug: 显示当前 namespace
+            console.log('[DEBUG] NAMESPACE:', NAMESPACE, 'URL:', window.location.href);
+            
             // Load public profile first
             await loadProfile();
             
@@ -1231,7 +1538,7 @@
         async function loadTokenList() {
             const token = TokenManager.get();
             try {
-                const res = await fetch(`${API_BASE}/api/tokens?token=${token}`);
+                const res = await fetch(apiUrl('/api/tokens', {token}));
                 const data = await res.json();
                 renderTokenList(data.tokens || []);
             } catch (e) { document.getElementById('tokenList').innerHTML = '<div style="color:var(--rose)">加载失败</div>'; }
@@ -1269,7 +1576,7 @@
             const note = document.getElementById('newTokenNote').value;
             const qaLimit = qaLimitInput ? parseInt(qaLimitInput) : null;
             try {
-                const res = await fetch(`${API_BASE}/api/tokens?token=${token}`, {
+                const res = await fetch(apiUrl('/api/tokens', {token}), {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ scope, duration, qa_limit: qaLimit, note })
                 });
@@ -1287,7 +1594,7 @@
             if (!confirm('确定撤销此 Token？撤销后无法恢复。')) return;
             const token = TokenManager.get();
             try {
-                const res = await fetch(`${API_BASE}/api/tokens/${tokenId}?token=${token}`, { method: 'DELETE' });
+                const res = await fetch(apiUrl(`/api/tokens/${tokenId}`, {token}), { method: 'DELETE' });
                 const data = await res.json();
                 if (data.success) loadTokenList();
             } catch (e) { alert('撤销失败，请重试'); }
@@ -1304,6 +1611,189 @@
         function closeUrlDisplay(event) {
             if (event && event.target !== event.currentTarget) return;
             document.getElementById('tokenUrlDisplay').classList.remove('show');
+        }
+
+        // ========== 角色管理 ==========
+        
+        async function loadProfileList() {
+            const token = TokenManager.get();
+            const container = document.getElementById('profileList');
+            
+            try {
+                // profiles API 需要明确 ns=default
+                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=default`);
+                if (!res.ok) throw new Error('Failed to load profiles');
+                const data = await res.json();
+                
+                if (!data.profiles || data.profiles.length === 0) {
+                    container.innerHTML = '<div class="empty">暂无角色</div>';
+                    return;
+                }
+                
+                container.innerHTML = data.profiles.map(p => `
+                    <div class="profile-item">
+                        <div class="profile-info">
+                            <div class="profile-name">
+                                ${p.name || p.namespace}
+                                <span class="profile-type ${p.type}">${p.type === 'character' ? '🎭 角色' : '👤 人类'}</span>
+                            </div>
+                            <div class="profile-meta">
+                                ns: ${p.namespace} · ${p.fact_count} 条知识
+                                ${p.title ? ' · ' + p.title : ''}
+                            </div>
+                        </div>
+                        <div class="profile-actions">
+                            <button class="profile-btn" onclick="openPublishModal('${p.namespace}', '${p.name || p.namespace}')">📤 发布</button>
+                            <button class="profile-btn primary" onclick="openProfile('${p.namespace}')">进入</button>
+                            ${p.namespace !== 'default' ? `<button class="profile-btn danger" onclick="deleteProfile('${p.namespace}')">删除</button>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<div class="error">加载失败</div>';
+                console.error('Load profiles error:', e);
+            }
+        }
+        
+        async function createProfile() {
+            const namespace = document.getElementById('newProfileNamespace').value.trim();
+            const type = document.getElementById('newProfileType').value;
+            const name = document.getElementById('newProfileName').value.trim();
+            const title = document.getElementById('newProfileTitle').value.trim();
+            
+            if (!namespace) {
+                alert('请输入 Namespace');
+                return;
+            }
+            
+            // 验证 namespace 格式
+            if (!/^[a-z][a-z0-9_-]*$/.test(namespace)) {
+                alert('Namespace 必须以小写字母开头，只能包含小写字母、数字、下划线和连字符');
+                return;
+            }
+            
+            const token = TokenManager.get();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=default`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ namespace, type, name: name || namespace, title })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    // 清空表单
+                    document.getElementById('newProfileNamespace').value = '';
+                    document.getElementById('newProfileName').value = '';
+                    document.getElementById('newProfileTitle').value = '';
+                    
+                    // 刷新列表
+                    loadProfileList();
+                    
+                    alert(`角色 "${name || namespace}" 创建成功！`);
+                } else {
+                    alert('创建失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('创建失败，请重试');
+                console.error('Create profile error:', e);
+            }
+        }
+        
+        async function openProfile(namespace) {
+            if (namespace === 'default') {
+                // 当前就是 default，刷新即可
+                window.location.href = `/?token=${TokenManager.get()}`;
+                return;
+            }
+            
+            // 1. 先检查本地是否已存储该 namespace 的 token
+            const localToken = TokenManager.getFor(namespace);
+            if (localToken) {
+                // 直接使用本地存储的 token
+                window.location.href = `/?token=${localToken}&ns=${namespace}`;
+                return;
+            }
+            
+            // 2. 本地没有，从服务器查询
+            const token = TokenManager.get();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${namespace}/tokens?token=${token}&ns=default`);
+                const data = await res.json();
+                
+                if (data.tokens && data.tokens.length > 0) {
+                    // 找到一个 full scope 的 token
+                    const fullToken = data.tokens.find(t => t.scope === 'full');
+                    if (fullToken) {
+                        window.location.href = `/?token=${fullToken.token_full}&ns=${namespace}`;
+                        return;
+                    }
+                    // 如果没有 full token，用第一个可用的
+                    const anyToken = data.tokens[0];
+                    window.location.href = `/?token=${anyToken.token_full}&ns=${namespace}`;
+                    return;
+                }
+                
+                // 没有现有 token，提示创建
+                if (confirm(`角色 "${namespace}" 还没有访问 Token，要创建一个吗？`)) {
+                    createProfileTokenAndOpen(namespace);
+                }
+            } catch (e) {
+                // API 可能不存在，直接创建
+                if (confirm(`要为角色 "${namespace}" 创建访问 Token 吗？`)) {
+                    createProfileTokenAndOpen(namespace);
+                }
+            }
+        }
+        
+        async function createProfileTokenAndOpen(namespace) {
+            const token = TokenManager.get();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${namespace}/token?token=${token}&ns=default`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scope: 'full', duration: '30d' })
+                });
+                
+                const data = await res.json();
+                
+                if (data.success && data.token) {
+                    window.location.href = `/?token=${data.token}&ns=${namespace}`;
+                } else {
+                    alert('创建 Token 失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('操作失败，请重试');
+                console.error('Create profile token error:', e);
+            }
+        }
+        
+        async function deleteProfile(namespace) {
+            if (!confirm(`确定删除角色 "${namespace}"？\n\n⚠️ 此操作不可恢复！`)) return;
+            
+            const deleteData = confirm('是否同时删除该角色的所有知识数据？\n\n选择"确定"将删除所有数据\n选择"取消"仅删除角色配置');
+            
+            const token = TokenManager.get();
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${namespace}?token=${token}&ns=default&delete_data=${deleteData}`, {
+                    method: 'DELETE'
+                });
+                
+                const data = await res.json();
+                
+                if (data.success) {
+                    loadProfileList();
+                } else {
+                    alert('删除失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('删除失败，请重试');
+            }
         }
 
         init();

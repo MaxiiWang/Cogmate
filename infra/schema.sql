@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS facts (
     source_url TEXT,
     last_retrieved_at TEXT,
     retrieval_count INTEGER DEFAULT 0,
+    namespace TEXT DEFAULT 'default',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -42,6 +43,7 @@ CREATE TABLE IF NOT EXISTS abstracts (
     counter_example_ids TEXT, -- JSON array
     page_index_path TEXT, -- 树索引路径，如 "/认知/决策模式"
     confirmed_by_user INTEGER DEFAULT 0,
+    namespace TEXT DEFAULT 'default',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
@@ -79,10 +81,24 @@ CREATE TABLE IF NOT EXISTS system_state (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Namespace profiles
+CREATE TABLE IF NOT EXISTS profiles (
+    namespace TEXT PRIMARY KEY,
+    type TEXT NOT NULL DEFAULT 'human',  -- human | character
+    config JSON,
+    created_at TEXT DEFAULT (datetime('now')),
+    last_active TEXT
+);
+
+-- 插入默认 profile
+INSERT OR IGNORE INTO profiles (namespace, type) VALUES ('default', 'human');
+
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_facts_timestamp ON facts(timestamp);
 CREATE INDEX IF NOT EXISTS idx_facts_content_type ON facts(content_type);
 CREATE INDEX IF NOT EXISTS idx_facts_source_type ON facts(source_type);
+CREATE INDEX IF NOT EXISTS idx_facts_namespace ON facts(namespace);
 CREATE INDEX IF NOT EXISTS idx_associations_from ON associations(from_fact_id);
 CREATE INDEX IF NOT EXISTS idx_associations_to ON associations(to_fact_id);
 CREATE INDEX IF NOT EXISTS idx_abstracts_page_index ON abstracts(page_index_path);
+CREATE INDEX IF NOT EXISTS idx_abstracts_namespace ON abstracts(namespace);

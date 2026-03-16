@@ -23,9 +23,10 @@ except ImportError:
 
 class CommandHandler:
     """Slash 命令处理器"""
-    
-    def __init__(self):
-        self.cogmate = CogmateAgent()
+
+    def __init__(self, namespace: str = "default"):
+        self.namespace = namespace
+        self.cogmate = CogmateAgent(namespace=namespace)
     
     def execute(self, command: str) -> Dict:
         """
@@ -202,17 +203,18 @@ class CommandHandler:
         """
         driver = get_neo4j()
         hubs = []
-        
+
         with driver.session() as session:
             result = session.run("""
                 MATCH (f:Fact)
+                WHERE f.namespace = $namespace
                 WITH f, COUNT { (f)-[]-() } AS degree
                 WHERE degree > 0
-                RETURN f.fact_id AS fact_id, f.summary AS summary, 
+                RETURN f.fact_id AS fact_id, f.summary AS summary,
                        f.content_type AS content_type, degree
                 ORDER BY degree DESC
                 LIMIT 10
-            """)
+            """, namespace=self.namespace)
             
             for record in result:
                 hubs.append({
@@ -251,15 +253,16 @@ class CommandHandler:
         """
         driver = get_neo4j()
         conflicts = []
-        
+
         with driver.session() as session:
             result = session.run("""
                 MATCH (a:Fact)-[r:矛盾]->(b:Fact)
+                WHERE a.namespace = $namespace AND b.namespace = $namespace
                 RETURN a.fact_id AS from_id, a.summary AS from_summary,
                        b.fact_id AS to_id, b.summary AS to_summary,
                        r.confidence AS confidence
                 ORDER BY r.confidence DESC
-            """)
+            """, namespace=self.namespace)
             
             for record in result:
                 conflicts.append({
@@ -309,9 +312,9 @@ class CommandHandler:
         with driver.session() as session:
             result = session.run("""
                 MATCH (f:Fact)
-                WHERE NOT (f)-[]-()
+                WHERE f.namespace = $namespace AND NOT (f)-[]-()
                 RETURN count(f) AS orphan_count
-            """)
+            """, namespace=self.namespace)
             orphan_count = result.single()["orphan_count"]
         
         orphan_ratio = orphan_count / total_nodes * 100 if total_nodes > 0 else 0
@@ -470,12 +473,12 @@ class CommandHandler:
                 for j in range(i + 1, len(fact_ids)):
                     result = session.run("""
                         MATCH path = shortestPath(
-                            (a:Fact {fact_id: $id1})-[*..3]-(b:Fact {fact_id: $id2})
+                            (a:Fact {fact_id: $id1, namespace: $namespace})-[*..3]-(b:Fact {fact_id: $id2, namespace: $namespace})
                         )
                         RETURN [n IN nodes(path) | n.fact_id] AS node_ids,
                                [r IN relationships(path) | type(r)] AS rel_types
                         LIMIT 1
-                    """, id1=fact_ids[i], id2=fact_ids[j])
+                    """, id1=fact_ids[i], id2=fact_ids[j], namespace=self.namespace)
                     
                     record = result.single()
                     if record:
@@ -506,9 +509,9 @@ class CommandHandler:
         with driver.session() as session:
             for fid in fact_ids:
                 result = session.run("""
-                    MATCH (a:Fact {fact_id: $fid})-[r:矛盾]-(b:Fact)
+                    MATCH (a:Fact {fact_id: $fid, namespace: $namespace})-[r:矛盾]-(b:Fact {namespace: $namespace})
                     RETURN a.summary AS a_summary, b.summary AS b_summary
-                """, fid=fid)
+                """, fid=fid, namespace=self.namespace)
                 
                 for record in result:
                     contradictions.append(

@@ -201,7 +201,7 @@
 <body>
     <div class="header">
         <div class="header-left">
-            <a href="/" class="back-btn">← 返回</a>
+            <a id="backBtn" href="/" class="back-btn">← 返回</a>
             <div class="logo">Chat</div>
             <a href="/guide" class="back-btn" style="margin-left: 8px;">📖 文档</a>
         </div>
@@ -229,7 +229,9 @@
 
     <script>
         const API_BASE = window.location.origin;
-        const TOKEN = new URLSearchParams(window.location.search).get('token');
+        const params = new URLSearchParams(window.location.search);
+        const TOKEN = params.get('token');
+        const NAMESPACE = params.get('ns') || 'default';
         let qaRemaining = -1;
         let isUnlimited = false;
 
@@ -242,6 +244,9 @@
                 const scopeLabels = { 'qa_public': '💬 问答服务', 'full': '🔓 全量访问' };
                 document.getElementById('scopeBadge').textContent = scopeLabels[data.scope] || data.scope;
                 if (data.qa_stats) { qaRemaining = data.qa_stats.remaining; isUnlimited = data.qa_stats.unlimited; updateQACounter(); }
+                // 设置返回链接（保留 token 和 ns）
+                const backUrl = `/?token=${TOKEN}${NAMESPACE !== 'default' ? '&ns=' + NAMESPACE : ''}`;
+                document.getElementById('backBtn').href = backUrl;
                 return true;
             } catch (e) { console.error('Auth check failed:', e); alert('验证失败'); location.href = '/'; return false; }
         }
@@ -275,7 +280,8 @@
             const typingEl = showTypingIndicator();
 
             try {
-                const url = `${API_BASE}/api/ask/stream?q=${encodeURIComponent(question)}&token=${encodeURIComponent(TOKEN)}`;
+                let url = `${API_BASE}/api/ask/stream?q=${encodeURIComponent(question)}&token=${encodeURIComponent(TOKEN)}`;
+                if (NAMESPACE !== 'default') url += `&ns=${NAMESPACE}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Request failed');
 
