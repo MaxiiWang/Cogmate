@@ -1852,9 +1852,38 @@
             }
 
             try {
-                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=default`);
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=${currentNs}`);
                 if (!res.ok) throw new Error('Failed');
                 _cognexusConfig = await res.json();
+
+                // Auto-detect: if not published, check CogNexus for existing agent
+                if (!_cognexusConfig.published) {
+                    try {
+                        const cognexusUrl = (_cognexusConfig.cognexus_url || 'https://wielding.ai').replace(/\/$/, '');
+                        const detectRes = await fetch(`${cognexusUrl}/api/agents`);
+                        if (detectRes.ok) {
+                            const detectData = await detectRes.json();
+                            const agents = detectData.agents || [];
+                            const sourceUrl = window.location.origin || 'http://124.221.254.71:8000';
+                            // Match by namespace + endpoint containing our host
+                            const match = agents.find(a =>
+                                a.namespace === currentNs &&
+                                (a.endpoint_url || '').includes('124.221.254.71')
+                            );
+                            if (match) {
+                                _cognexusConfig.published = true;
+                                _cognexusConfig.agent_id = match.agent_id;
+                                // Sync back to profile
+                                fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=${currentNs}`, {
+                                    method: 'PUT',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({ published: true, agent_id: match.agent_id })
+                                }).catch(() => {});
+                            }
+                        }
+                    } catch (e2) { /* ignore detection errors */ }
+                }
+
                 renderCogNexusPanel(_cognexusConfig);
             } catch (e) {
                 container.innerHTML = '<div style="color:var(--rose);text-align:center;padding:12px;">加载失败</div>';
@@ -2011,7 +2040,7 @@
             };
 
             try {
-                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=default`, {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=${currentNs}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)
@@ -2046,7 +2075,7 @@
             await saveCogNexusConfig();
 
             try {
-                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus/publish?token=${token}&ns=default`, {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus/publish?token=${token}&ns=${currentNs}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -2080,7 +2109,7 @@
             }
 
             try {
-                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus/restock?token=${token}&ns=default`, {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus/restock?token=${token}&ns=${currentNs}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
