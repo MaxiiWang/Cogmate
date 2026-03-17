@@ -15,5 +15,10 @@
     "daily_report_enabled": true,
     "daily_report_time": "20:00",
     "weekly_report_day": "sunday"
+  },
+  "llm": {
+    "base_url": "https://ark.cn-beijing.volces.com/api/v3",
+    "model": "doubao-seed-2-0-lite-260215",
+    "api_key": "47eb48b5-2da6-415a-9ce6-6e19e3777a6d"
   }
 }

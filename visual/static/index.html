@@ -70,6 +70,86 @@
             color: var(--accent-text);
         }
         .logo span { color: var(--text-1); font-weight: 500; }
+
+        /* Namespace Switcher */
+        .ns-switcher {
+            position: relative;
+            margin-left: 20px;
+            margin-right: auto;
+        }
+        .ns-switcher-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid var(--border-m);
+            border-radius: 6px;
+            color: var(--text-1);
+            font-size: 0.88em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .ns-switcher-btn:hover {
+            background: rgba(255,255,255,0.07);
+            border-color: var(--accent);
+        }
+        .ns-switcher-btn .ns-type-icon { font-size: 0.9em; }
+        .ns-switcher-btn .ns-arrow {
+            font-size: 0.7em;
+            color: var(--text-3);
+            transition: transform 0.2s;
+        }
+        .ns-switcher.open .ns-arrow { transform: rotate(180deg); }
+        .ns-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            min-width: 220px;
+            background: var(--bg-s);
+            border: 1px solid var(--border-m);
+            border-radius: 8px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+            z-index: 200;
+            overflow: hidden;
+        }
+        .ns-switcher.open .ns-dropdown { display: block; }
+        .ns-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: background 0.15s;
+            font-size: 0.88em;
+            color: var(--text-2);
+        }
+        .ns-dropdown-item:hover { background: rgba(255,255,255,0.05); color: var(--text-1); }
+        .ns-dropdown-item.active { color: var(--accent-text); background: var(--accent-muted); }
+        .ns-dropdown-item .ns-item-icon { width: 20px; text-align: center; }
+        .ns-dropdown-item .ns-item-name { flex: 1; }
+        .ns-dropdown-item .ns-item-delete {
+            color: var(--text-3);
+            font-size: 0.85em;
+            padding: 2px 6px;
+            border-radius: 3px;
+            transition: all 0.15s;
+        }
+        .ns-dropdown-item .ns-item-delete:hover { color: var(--rose); background: rgba(184,134,138,0.12); }
+        .ns-dropdown-divider { height: 1px; background: var(--border); margin: 4px 0; }
+        .ns-dropdown-create {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 0.85em;
+            color: var(--accent-text);
+            transition: background 0.15s;
+        }
+        .ns-dropdown-create:hover { background: var(--accent-muted); }
+
         .header-nav {
             display: flex;
             gap: 16px;
@@ -170,6 +250,28 @@
             color: var(--text-2);
             line-height: 1.6;
         }
+
+        /* Profile Quick Info */
+        .profile-quick-info {
+            display: flex;
+            gap: 16px;
+            margin-top: 10px;
+            font-size: 0.82em;
+            color: var(--text-3);
+        }
+        .profile-quick-info .qi-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 4px;
+        }
+        .profile-quick-info .qi-value {
+            color: var(--text-2);
+            font-weight: 500;
+        }
+
         .profile-edit-btn {
             background: transparent;
             border: 1px solid var(--border-m);
@@ -185,8 +287,8 @@
             border-color: var(--accent);
             color: var(--accent-text);
         }
-        
-        /* Edit Modal */
+
+        /* Modal */
         .modal-overlay {
             position: fixed;
             inset: 0;
@@ -294,6 +396,31 @@
             font-weight: 500;
         }
         .btn-save:hover { background: var(--accent-s); }
+
+        /* Manage Modal Tabs */
+        .manage-tabs {
+            display: flex;
+            gap: 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 20px;
+        }
+        .manage-tab-btn {
+            padding: 8px 18px;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-3);
+            font-size: 0.88em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .manage-tab-btn:hover { color: var(--text-2); }
+        .manage-tab-btn.active {
+            color: var(--accent-text);
+            border-bottom-color: var(--accent);
+        }
+        .manage-tab-content { display: none; }
+        .manage-tab-content.active { display: block; }
 
         /* Hero - 非对称布局 */
         .welcome-section {
@@ -600,83 +727,6 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* 角色管理 */
-        .profile-management { display: none !important; margin-top: 20px; }
-        .profile-management.show { display: block !important; }
-        .profile-create-form {
-            background: var(--bg-s);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 16px;
-        }
-        .profile-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .profile-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: var(--bg-s);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 14px 18px;
-            transition: all 0.2s;
-        }
-        .profile-item:hover {
-            border-color: var(--accent);
-            background: rgba(212, 160, 84, 0.03);
-        }
-        .profile-info { flex: 1; }
-        .profile-name {
-            font-weight: 600;
-            color: var(--text-1);
-            font-size: 0.95em;
-        }
-        .profile-meta {
-            color: var(--text-3);
-            font-size: 0.8em;
-            margin-top: 4px;
-        }
-        .profile-type {
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.7em;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-        .profile-type.character { background: rgba(157, 139, 184, 0.2); color: var(--purple); }
-        .profile-type.human { background: rgba(109, 168, 155, 0.2); color: var(--teal); }
-        .profile-actions {
-            display: flex;
-            gap: 8px;
-        }
-        .profile-btn {
-            padding: 6px 12px;
-            border: 1px solid var(--border-m);
-            border-radius: 5px;
-            background: transparent;
-            color: var(--text-2);
-            font-size: 0.8em;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .profile-btn:hover {
-            border-color: var(--accent);
-            color: var(--accent);
-        }
-        .profile-btn.primary {
-            background: var(--accent);
-            color: var(--bg);
-            border-color: var(--accent);
-        }
-        .profile-btn.danger:hover {
-            border-color: var(--rose);
-            color: var(--rose);
-        }
-
         /* Token 管理 */
         .token-management { display: none; margin-top: 20px; }
         .token-management.show { display: block; }
@@ -834,6 +884,53 @@
         }
         .token-url-box button:hover { background: rgba(255,255,255,0.06); }
 
+        /* Manage modal token list */
+        .manage-token-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .manage-token-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+        .manage-token-item .mt-scope {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .manage-token-item .mt-scope.full { background: rgba(109,168,155,0.15); color: var(--teal); }
+        .manage-token-item .mt-scope.qa_public { background: rgba(124,153,184,0.15); color: var(--blue); }
+        .manage-token-item .mt-scope.browse_public { background: rgba(157,139,184,0.15); color: var(--purple); }
+        .manage-token-item .mt-info { flex: 1; color: var(--text-2); }
+        .manage-token-item .mt-status { font-size: 0.8em; color: var(--text-3); }
+
+        /* Profile btn (used in LLM presets) */
+        .profile-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border-m);
+            border-radius: 5px;
+            background: transparent;
+            color: var(--text-2);
+            font-size: 0.8em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .profile-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
         /* 入场动画 */
         @keyframes fade-up {
             from { opacity: 0; transform: translateY(16px); }
@@ -858,12 +955,32 @@
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .features-list { flex-direction: column; }
             .form-row { flex-direction: column; }
+            .ns-switcher-btn .ns-name { max-width: 100px; overflow: hidden; text-overflow: ellipsis; }
         }
     </style>
 </head>
 <body>
     <div class="header">
         <div class="logo">🧠 <span>Brain</span> Visual</div>
+
+        <!-- Namespace Switcher -->
+        <div class="ns-switcher" id="nsSwitcher">
+            <button class="ns-switcher-btn" onclick="toggleNsDropdown()">
+                <span class="ns-type-icon" id="nsTypeIcon">🎭</span>
+                <span class="ns-name" id="nsCurrentName">加载中...</span>
+                <span class="ns-arrow">▼</span>
+            </button>
+            <div class="ns-dropdown" id="nsDropdown">
+                <div id="nsDropdownList">
+                    <div class="loading" style="padding:12px;font-size:0.85em;">加载中...</div>
+                </div>
+                <div class="ns-dropdown-divider"></div>
+                <div class="ns-dropdown-create" onclick="promptCreateProfile()">
+                    <span>＋</span> <span>新建角色</span>
+                </div>
+            </div>
+        </div>
+
         <div class="header-nav">
             <a href="/guide" class="header-link">📖 文档</a>
         </div>
@@ -882,10 +999,14 @@
                     <div class="profile-name" id="profileName">加载中...</div>
                     <div class="profile-title" id="profileTitle"></div>
                     <div class="profile-bio" id="profileBio"></div>
-                    <button class="profile-edit-btn" id="profileEditBtn" style="display:none" onclick="openEditModal()">✏️ 编辑资料</button>
+                    <div class="profile-quick-info" id="profileQuickInfo" style="display:none">
+                        <div class="qi-item">🤖 <span class="qi-value" id="qiLlmModel">-</span></div>
+                        <div class="qi-item">🎫 <span class="qi-value" id="qiTokenCount">-</span> tokens</div>
+                    </div>
+                    <button class="profile-edit-btn" id="profileManageBtn" style="display:none" onclick="openManageModal()">⚙ 管理</button>
                 </div>
             </div>
-            
+
             <div class="features-list" id="featuresList">
                 <div class="feature-item">
                     <div class="icon">📝</div>
@@ -901,33 +1022,92 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Profile Edit Modal -->
-        <div class="modal-overlay" id="editModal">
-            <div class="modal-content">
+
+        <!-- Management Modal (Profile + LLM + Tokens) -->
+        <div class="modal-overlay" id="manageModal">
+            <div class="modal-content" style="max-width:520px;">
                 <div class="modal-header">
-                    <h3>编辑个人资料</h3>
-                    <button class="modal-close" onclick="closeEditModal()">×</button>
+                    <h3>⚙ 管理</h3>
+                    <button class="modal-close" onclick="closeManageModal()">×</button>
                 </div>
-                <div class="form-group">
-                    <label>名称</label>
-                    <input type="text" id="editName" placeholder="你的名字">
+                <div class="manage-tabs">
+                    <button class="manage-tab-btn active" onclick="switchManageTab(this,'manageProfileTab')">个人资料</button>
+                    <button class="manage-tab-btn" onclick="switchManageTab(this,'manageLlmTab')">🤖 LLM</button>
+                    <button class="manage-tab-btn" onclick="switchManageTab(this,'manageTokensTab')">🎫 Tokens</button>
                 </div>
-                <div class="form-group">
-                    <label>头衔</label>
-                    <input type="text" id="editTitle" placeholder="一句话介绍">
+                <!-- Profile Tab -->
+                <div class="manage-tab-content active" id="manageProfileTab">
+                    <div class="form-group">
+                        <label>名称</label>
+                        <input type="text" id="manageName" placeholder="你的名字">
+                    </div>
+                    <div class="form-group">
+                        <label>头衔</label>
+                        <input type="text" id="manageTitle" placeholder="一句话介绍">
+                    </div>
+                    <div class="form-group">
+                        <label>简介</label>
+                        <textarea id="manageBio" placeholder="详细介绍..."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>头像 URL（留空使用默认）</label>
+                        <input type="text" id="manageAvatar" placeholder="https://...">
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-cancel" onclick="closeManageModal()">取消</button>
+                        <button class="btn-save" onclick="saveProfile()">保存</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>简介</label>
-                    <textarea id="editBio" placeholder="详细介绍..."></textarea>
+                <!-- LLM Tab -->
+                <div class="manage-tab-content" id="manageLlmTab">
+                    <p style="color: var(--text-2); font-size: 0.85em; margin-bottom: 16px;">
+                        为角色 <strong id="manageLlmNs"></strong> 配置独立的 LLM
+                    </p>
+                    <div class="form-group">
+                        <label>选择模型</label>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;" id="manageLlmPresets">
+                            <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-seed-2-0-lite-260215" onclick="selectManageLLM(this)">🌋 豆包 Seed Lite</button>
+                            <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-1-5-pro-32k-250115" onclick="selectManageLLM(this)">🌋 豆包 1.5 Pro</button>
+                            <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="custom" onclick="selectManageLLM(this)">⚙️ 自定义</button>
+                        </div>
+                    </div>
+                    <div id="manageLlmCustomGroup" style="display:none;">
+                        <div class="form-group">
+                            <label>Base URL</label>
+                            <input type="url" id="manageLlmBaseUrl" placeholder="https://api.openai.com/v1">
+                        </div>
+                        <div class="form-group">
+                            <label>模型</label>
+                            <input type="text" id="manageLlmModel" placeholder="gpt-4o">
+                        </div>
+                    </div>
+                    <div id="manageLlmKeyGroup" style="display:none;">
+                        <div class="form-group">
+                            <label>API Key</label>
+                            <input type="password" id="manageLlmApiKey" placeholder="输入 API Key...">
+                            <div id="manageLlmKeyStatus" style="font-size:0.8em;color:var(--text-3);margin-top:4px;"></div>
+                        </div>
+                    </div>
+                    <div class="modal-actions">
+                        <button class="btn-cancel" onclick="clearManageLLM()">清除配置</button>
+                        <button class="btn-save" onclick="saveManageLLM()">保存</button>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>头像 URL（留空使用默认）</label>
-                    <input type="text" id="editAvatar" placeholder="https://...">
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closeEditModal()">取消</button>
-                    <button class="btn-save" onclick="saveProfile()">保存</button>
+                <!-- Tokens Tab -->
+                <div class="manage-tab-content" id="manageTokensTab">
+                    <div style="display:flex;gap:16px;margin-bottom:16px;">
+                        <div style="text-align:center;padding:12px 18px;background:var(--bg);border-radius:8px;flex:1;">
+                            <div style="font-size:0.72em;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">总计</div>
+                            <div style="font-size:1.4em;font-weight:700;color:var(--accent-text);" id="manageTokenTotal">-</div>
+                        </div>
+                        <div style="text-align:center;padding:12px 18px;background:var(--bg);border-radius:8px;flex:1;">
+                            <div style="font-size:0.72em;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">活跃</div>
+                            <div style="font-size:1.4em;font-weight:700;color:var(--teal);" id="manageTokenActive">-</div>
+                        </div>
+                    </div>
+                    <div class="manage-token-list" id="manageTokenList">
+                        <div class="loading"><div class="spinner"></div>加载中...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -976,48 +1156,6 @@
                 <div class="modal-actions">
                     <button class="btn-cancel" onclick="closePublishModal()">取消</button>
                     <button class="btn-save" id="publishBtn" onclick="doPublish()">发布</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- LLM 配置弹窗 -->
-        <div class="modal-overlay" id="llmConfigModal">
-            <div class="modal-content" style="max-width: 460px;">
-                <div class="modal-header">
-                    <h3>🤖 LLM 配置</h3>
-                    <button class="modal-close" onclick="closeLLMConfig()">×</button>
-                </div>
-                <p style="color: var(--text-2); font-size: 0.85em; margin-bottom: 16px;">
-                    为角色 <strong id="llmConfigNs"></strong> 配置独立的 LLM
-                </p>
-                <div class="form-group">
-                    <label>选择模型</label>
-                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;" id="llmProfilePresets">
-                        <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-seed-2-0-lite-260215" onclick="selectProfileLLM(this)">🌋 豆包 Seed Lite</button>
-                        <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-1-5-pro-32k-250115" onclick="selectProfileLLM(this)">🌋 豆包 1.5 Pro</button>
-                        <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="custom" onclick="selectProfileLLM(this)">⚙️ 自定义</button>
-                    </div>
-                </div>
-                <div id="llmCustomGroup" style="display:none;">
-                    <div class="form-group">
-                        <label>Base URL</label>
-                        <input type="url" id="llmProfileBaseUrl" placeholder="https://api.openai.com/v1">
-                    </div>
-                    <div class="form-group">
-                        <label>模型</label>
-                        <input type="text" id="llmProfileModel" placeholder="gpt-4o">
-                    </div>
-                </div>
-                <div id="llmKeyGroup" style="display:none;">
-                    <div class="form-group">
-                        <label>API Key</label>
-                        <input type="password" id="llmProfileApiKey" placeholder="输入 API Key...">
-                        <div id="llmKeyStatus" style="font-size:0.8em;color:var(--text-3);margin-top:4px;"></div>
-                    </div>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="clearProfileLLM()">清除配置</button>
-                    <button class="btn-save" onclick="saveProfileLLM()">保存</button>
                 </div>
             </div>
         </div>
@@ -1122,38 +1260,6 @@
             </div>
         </div>
 
-        <!-- 角色管理（仅 default namespace 显示） -->
-        <div class="profile-management" id="profileManagement">
-            <div class="section-label">🎭 角色管理</div>
-            <div class="profile-create-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Namespace</label>
-                        <input type="text" id="newProfileNamespace" placeholder="英文标识，如 sage">
-                    </div>
-                    <div class="form-group">
-                        <label>类型</label>
-                        <select id="newProfileType">
-                            <option value="character">🎭 角色</option>
-                            <option value="human">👤 人类</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>名称</label>
-                        <input type="text" id="newProfileName" placeholder="显示名称">
-                    </div>
-                    <div class="form-group">
-                        <label>标题</label>
-                        <input type="text" id="newProfileTitle" placeholder="一句话介绍">
-                    </div>
-                </div>
-                <button class="create-btn" onclick="createProfile()">创建角色</button>
-            </div>
-            <div class="profile-list" id="profileList">
-                <div class="loading"><div class="spinner"></div>加载中...</div>
-            </div>
-        </div>
-
         <!-- Token 管理 -->
         <div class="token-management" id="tokenManagement">
             <div class="section-label">Token 管理</div>
@@ -1205,11 +1311,16 @@
 
     <script>
         const API_BASE = window.location.origin;
-        
+
         // Namespace 支持
-        const urlParams = new URLSearchParams(window.location.search);
-        const NAMESPACE = urlParams.get('ns') || 'default';
-        
+        const currentNs = new URLSearchParams(window.location.search).get('ns') || 'default';
+        const NAMESPACE = currentNs;
+
+        // Update document title with namespace
+        if (currentNs !== 'default') {
+            document.title = `Cogmate Visual - ${currentNs}`;
+        }
+
         function apiUrl(endpoint, params = {}) {
             const url = new URL(endpoint, API_BASE);
             if (NAMESPACE !== 'default') {
@@ -1222,60 +1333,181 @@
         }
 
         const TokenManager = {
-            STORAGE_KEY: 'cogmate_tokens',  // 存储所有 namespace 的 token
-            
-            // 获取所有存储的 tokens
+            STORAGE_KEY: 'cogmate_tokens',
+
             _getAll() {
                 const data = localStorage.getItem(this.STORAGE_KEY);
                 return data ? JSON.parse(data) : {};
             },
-            
-            // 保存所有 tokens
+
             _saveAll(data) {
                 localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
             },
-            
-            // 获取当前 namespace 的 token
+
             get() {
                 const all = this._getAll();
                 return all[NAMESPACE]?.token || null;
             },
-            
-            // 获取当前 namespace 的 token info
+
             getInfo() {
                 const all = this._getAll();
                 return all[NAMESPACE]?.info || null;
             },
-            
-            // 设置当前 namespace 的 token
+
             set(token, info) {
                 const all = this._getAll();
                 all[NAMESPACE] = { token, info, updatedAt: new Date().toISOString() };
                 this._saveAll(all);
             },
-            
-            // 清除当前 namespace 的 token
+
             clear() {
                 const all = this._getAll();
                 delete all[NAMESPACE];
                 this._saveAll(all);
             },
-            
-            // 获取指定 namespace 的 token（用于跨 namespace 切换）
+
             getFor(ns) {
                 const all = this._getAll();
                 return all[ns]?.token || null;
             },
-            
-            // 列出所有已保存的 namespaces
+
             listNamespaces() {
                 return Object.keys(this._getAll());
             },
-            
+
             getScope() { return this.getInfo()?.scope || 'none'; },
             canChat() { return ['full', 'qa_public'].includes(this.getScope()); },
             canBrowse() { return ['full', 'browse_public'].includes(this.getScope()); }
         };
+
+        // ========== Namespace Switcher ==========
+
+        function toggleNsDropdown() {
+            const switcher = document.getElementById('nsSwitcher');
+            switcher.classList.toggle('open');
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            const switcher = document.getElementById('nsSwitcher');
+            if (!switcher.contains(e.target)) {
+                switcher.classList.remove('open');
+            }
+        });
+
+        async function loadNamespaces() {
+            const token = TokenManager.get() || TokenManager.getFor('default');
+            // Update current ns display
+            document.getElementById('nsCurrentName').textContent = currentNs;
+
+            if (!token) {
+                document.getElementById('nsDropdownList').innerHTML = '<div style="padding:10px 16px;font-size:0.85em;color:var(--text-3);">登录后可切换角色</div>';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=default`);
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                const profiles = data.profiles || [];
+
+                // Update current ns icon
+                const currentProfile = profiles.find(p => p.namespace === currentNs);
+                if (currentProfile) {
+                    document.getElementById('nsTypeIcon').textContent = currentProfile.type === 'character' ? '🎭' : '👤';
+                    document.getElementById('nsCurrentName').textContent = currentProfile.name || currentNs;
+                }
+
+                const listEl = document.getElementById('nsDropdownList');
+                if (profiles.length === 0) {
+                    listEl.innerHTML = '<div style="padding:10px 16px;font-size:0.85em;color:var(--text-3);">暂无角色</div>';
+                    return;
+                }
+
+                listEl.innerHTML = profiles.map(p => {
+                    const isActive = p.namespace === currentNs;
+                    const icon = p.type === 'character' ? '🎭' : '👤';
+                    const deleteBtn = p.namespace !== 'default'
+                        ? `<span class="ns-item-delete" onclick="event.stopPropagation();deleteNsProfile('${p.namespace}')" title="删除">✕</span>`
+                        : '';
+                    return `<div class="ns-dropdown-item${isActive ? ' active' : ''}" onclick="switchNamespace('${p.namespace}')">
+                        <span class="ns-item-icon">${icon}</span>
+                        <span class="ns-item-name">${p.name || p.namespace}</span>
+                        ${deleteBtn}
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                console.error('Load namespaces error:', e);
+                document.getElementById('nsDropdownList').innerHTML = '<div style="padding:10px 16px;font-size:0.85em;color:var(--text-3);">加载失败</div>';
+            }
+        }
+
+        function switchNamespace(ns) {
+            const token = TokenManager.getFor(ns) || TokenManager.get();
+            const url = new URL(window.location.href);
+            if (ns === 'default') {
+                url.searchParams.delete('ns');
+            } else {
+                url.searchParams.set('ns', ns);
+            }
+            if (token) {
+                url.searchParams.set('token', token);
+            }
+            window.location.href = url.toString();
+        }
+
+        async function deleteNsProfile(namespace) {
+            if (!confirm(`确定删除角色 "${namespace}"？\n\n⚠️ 此操作不可恢复！`)) return;
+            const deleteData = confirm('是否同时删除该角色的所有知识数据？\n\n选择"确定"将删除所有数据\n选择"取消"仅删除角色配置');
+            const token = TokenManager.get() || TokenManager.getFor('default');
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${namespace}?token=${token}&ns=default&delete_data=${deleteData}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    if (namespace === currentNs) {
+                        switchNamespace('default');
+                    } else {
+                        loadNamespaces();
+                    }
+                } else {
+                    alert('删除失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) { alert('删除失败，请重试'); }
+        }
+
+        function promptCreateProfile() {
+            document.getElementById('nsSwitcher').classList.remove('open');
+            const namespace = prompt('输入新角色 Namespace（英文标识，如 sage）：');
+            if (!namespace) return;
+            if (!/^[a-z][a-z0-9_-]*$/.test(namespace)) {
+                alert('Namespace 必须以小写字母开头，只能包含小写字母、数字、下划线和连字符');
+                return;
+            }
+            const name = prompt('显示名称：', namespace);
+            if (name === null) return;
+            doCreateProfile(namespace, name);
+        }
+
+        async function doCreateProfile(namespace, name) {
+            const token = TokenManager.get() || TokenManager.getFor('default');
+            if (!token) { alert('请先登录'); return; }
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=default`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ namespace, type: 'character', name: name || namespace })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`角色 "${name || namespace}" 创建成功！`);
+                    loadNamespaces();
+                } else {
+                    alert('创建失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) { alert('创建失败，请重试'); }
+        }
+
+        // ========== Token Verify ==========
 
         async function verifyToken() {
             const input = document.getElementById('tokenInput');
@@ -1294,7 +1526,6 @@
                 if (data.valid) {
                     TokenManager.set(token, data);
                     updateUI(data);
-                    // 清除 URL 中的 token 参数，但保留 ns 参数
                     if (location.search.includes('token=')) {
                         const newUrl = new URL(window.location.href);
                         newUrl.searchParams.delete('token');
@@ -1374,17 +1605,12 @@
             }
             if (permissions.full_access) {
                 document.getElementById('tokenManagement').classList.add('show');
-                document.getElementById('profileEditBtn').style.display = 'inline-block';
+                document.getElementById('profileManageBtn').style.display = 'inline-block';
                 loadTokenList();
-                
-                // 仅在 default namespace 显示角色管理
-                if (NAMESPACE === 'default') {
-                    console.log('Loading profile management for default namespace');
-                    const pm = document.getElementById('profileManagement');
-                    console.log('profileManagement element:', pm);
-                    pm.classList.add('show');
-                    loadProfileList();
-                }
+                // Load namespace list for header switcher
+                loadNamespaces();
+                // Load quick info
+                loadProfileQuickInfo();
             }
             if (authInfo.valid) document.getElementById('tokenSection').style.display = 'none';
         }
@@ -1411,53 +1637,115 @@
 
         function logout() { TokenManager.clear(); location.reload(); }
 
-        // Profile functions
+        // ========== Profile ==========
+
         async function loadProfile() {
             try {
                 const res = await fetch(apiUrl('/api/public/profile'));
                 const profile = await res.json();
-                
+
                 document.getElementById('profileName').textContent = profile.name || '未设置';
                 document.getElementById('profileTitle').textContent = profile.title || '';
                 document.getElementById('profileBio').textContent = profile.bio || '';
-                
+
                 const avatarEl = document.getElementById('profileAvatar');
                 if (profile.avatar) {
                     avatarEl.innerHTML = `<img src="${profile.avatar}" alt="avatar" onerror="this.parentElement.innerHTML='🧠'">`;
                 } else {
                     avatarEl.innerHTML = '🧠';
                 }
+
+                // Update ns switcher with profile name
+                if (profile.name) {
+                    document.getElementById('nsCurrentName').textContent = profile.name;
+                }
+                // Update title
+                if (profile.name && currentNs !== 'default') {
+                    document.title = `Cogmate Visual - ${profile.name}`;
+                }
             } catch (e) {
                 console.error('Failed to load profile:', e);
             }
         }
-        
-        function openEditModal() {
-            const modal = document.getElementById('editModal');
-            document.getElementById('editName').value = document.getElementById('profileName').textContent || '';
-            document.getElementById('editTitle').value = document.getElementById('profileTitle').textContent || '';
-            document.getElementById('editBio').value = document.getElementById('profileBio').textContent || '';
+
+        async function loadProfileQuickInfo() {
+            const token = TokenManager.get();
+            if (!token) return;
+
+            const infoEl = document.getElementById('profileQuickInfo');
+            infoEl.style.display = 'flex';
+
+            // Load LLM model info
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/llm?token=${token}&ns=${currentNs === 'default' ? 'default' : 'default'}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    document.getElementById('qiLlmModel').textContent = data.model || '默认';
+                }
+            } catch (e) {
+                document.getElementById('qiLlmModel').textContent = '默认';
+            }
+
+            // Load token count
+            try {
+                const res = await fetch(apiUrl('/api/tokens', {token}));
+                if (res.ok) {
+                    const data = await res.json();
+                    const tokens = data.tokens || [];
+                    document.getElementById('qiTokenCount').textContent = tokens.length;
+                }
+            } catch (e) {
+                document.getElementById('qiTokenCount').textContent = '-';
+            }
+        }
+
+        // ========== Management Modal ==========
+
+        function openManageModal() {
+            const modal = document.getElementById('manageModal');
+            // Fill profile tab
+            document.getElementById('manageName').value = document.getElementById('profileName').textContent || '';
+            document.getElementById('manageTitle').value = document.getElementById('profileTitle').textContent || '';
+            document.getElementById('manageBio').value = document.getElementById('profileBio').textContent || '';
             const avatarEl = document.getElementById('profileAvatar');
             const avatarImg = avatarEl.querySelector('img');
-            document.getElementById('editAvatar').value = avatarImg ? avatarImg.src : '';
+            document.getElementById('manageAvatar').value = avatarImg ? avatarImg.src : '';
+
+            // Fill LLM tab ns label
+            document.getElementById('manageLlmNs').textContent = currentNs;
+            loadManageLLM();
+
+            // Fill tokens tab
+            loadManageTokens();
+
+            // Reset to first tab
+            switchManageTab(document.querySelector('.manage-tab-btn'), 'manageProfileTab');
+
             modal.classList.add('show');
         }
-        
-        function closeEditModal() {
-            document.getElementById('editModal').classList.remove('show');
+
+        function closeManageModal() {
+            document.getElementById('manageModal').classList.remove('show');
         }
-        
+
+        function switchManageTab(btn, tabId) {
+            document.querySelectorAll('.manage-tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.manage-tab-content').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(tabId).classList.add('active');
+        }
+
         async function saveProfile() {
             const token = TokenManager.get();
             if (!token) { alert('请先登录'); return; }
-            
+
             const data = {
-                name: document.getElementById('editName').value.trim(),
-                title: document.getElementById('editTitle').value.trim(),
-                bio: document.getElementById('editBio').value.trim(),
-                avatar: document.getElementById('editAvatar').value.trim()
+                name: document.getElementById('manageName').value.trim(),
+                title: document.getElementById('manageTitle').value.trim(),
+                bio: document.getElementById('manageBio').value.trim(),
+                avatar: document.getElementById('manageAvatar').value.trim()
             };
-            
+
             try {
                 const res = await fetch(`${API_BASE}/api/profile?token=${token}`, {
                     method: 'PUT',
@@ -1466,8 +1754,9 @@
                 });
                 const result = await res.json();
                 if (result.success) {
-                    closeEditModal();
+                    closeManageModal();
                     loadProfile();
+                    loadNamespaces();
                 } else {
                     alert('保存失败: ' + (result.detail || '未知错误'));
                 }
@@ -1475,27 +1764,181 @@
                 alert('保存失败，请重试');
             }
         }
-        
-        // Close modal on outside click
-        document.getElementById('editModal').addEventListener('click', function(e) {
-            if (e.target === this) closeEditModal();
+
+        // ========== Manage LLM Tab ==========
+
+        async function loadManageLLM() {
+            // Reset state
+            document.getElementById('manageLlmCustomGroup').style.display = 'none';
+            document.getElementById('manageLlmKeyGroup').style.display = 'none';
+            document.getElementById('manageLlmBaseUrl').value = '';
+            document.getElementById('manageLlmModel').value = '';
+            document.getElementById('manageLlmApiKey').value = '';
+            document.getElementById('manageLlmKeyStatus').textContent = '';
+            document.querySelectorAll('#manageLlmPresets .profile-btn').forEach(b => b.style.border = '');
+
+            const token = TokenManager.get();
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/llm?token=${token}&ns=default`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.base_url || data.model) {
+                        let matched = false;
+                        document.querySelectorAll('#manageLlmPresets .profile-btn[data-base]').forEach(btn => {
+                            if (btn.dataset.base !== 'custom' && btn.dataset.base === data.base_url && btn.dataset.model === data.model) {
+                                btn.style.border = '2px solid var(--accent)';
+                                matched = true;
+                            }
+                        });
+                        if (!matched && data.base_url) {
+                            document.getElementById('manageLlmCustomGroup').style.display = 'block';
+                            document.getElementById('manageLlmBaseUrl').value = data.base_url;
+                            document.getElementById('manageLlmModel').value = data.model;
+                            document.querySelectorAll('#manageLlmPresets .profile-btn').forEach(b => {
+                                if (b.dataset.base === 'custom') b.style.border = '2px solid var(--accent)';
+                            });
+                        }
+                        document.getElementById('manageLlmKeyGroup').style.display = 'block';
+                        if (data.has_key) {
+                            document.getElementById('manageLlmKeyStatus').textContent = '已配置 API Key（留空保持不变）';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Load LLM config error:', e);
+            }
+        }
+
+        function selectManageLLM(btn) {
+            document.querySelectorAll('#manageLlmPresets .profile-btn').forEach(b => b.style.border = '');
+            btn.style.border = '2px solid var(--accent)';
+
+            if (btn.dataset.base === 'custom') {
+                document.getElementById('manageLlmCustomGroup').style.display = 'block';
+                document.getElementById('manageLlmBaseUrl').value = '';
+                document.getElementById('manageLlmModel').value = '';
+            } else {
+                document.getElementById('manageLlmCustomGroup').style.display = 'none';
+                document.getElementById('manageLlmBaseUrl').value = btn.dataset.base;
+                document.getElementById('manageLlmModel').value = btn.dataset.model;
+            }
+            document.getElementById('manageLlmKeyGroup').style.display = 'block';
+        }
+
+        async function saveManageLLM() {
+            const baseUrl = document.getElementById('manageLlmBaseUrl').value.trim();
+            const model = document.getElementById('manageLlmModel').value.trim();
+            const apiKey = document.getElementById('manageLlmApiKey').value.trim();
+
+            if (!baseUrl || !model) {
+                alert('请选择或填写模型配置');
+                return;
+            }
+
+            const token = TokenManager.get();
+            const body = { base_url: baseUrl, model: model };
+            if (apiKey) body.api_key = apiKey;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/llm?token=${token}&ns=default`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('LLM 配置已保存');
+                    closeManageModal();
+                    loadProfileQuickInfo();
+                } else {
+                    alert('保存失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('保存失败: ' + e.message);
+            }
+        }
+
+        async function clearManageLLM() {
+            if (!confirm('确定清除 LLM 配置？将回退到环境变量或 Gateway。')) return;
+            const token = TokenManager.get();
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/llm?token=${token}&ns=default`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clear: true })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('LLM 配置已清除');
+                    closeManageModal();
+                    loadProfileQuickInfo();
+                }
+            } catch (e) {
+                alert('清除失败: ' + e.message);
+            }
+        }
+
+        // ========== Manage Tokens Tab ==========
+
+        async function loadManageTokens() {
+            const token = TokenManager.get();
+            if (!token) {
+                document.getElementById('manageTokenList').innerHTML = '<div style="color:var(--text-3);text-align:center;padding:12px;">请先登录</div>';
+                return;
+            }
+
+            try {
+                const res = await fetch(apiUrl('/api/tokens', {token}));
+                const data = await res.json();
+                const tokens = data.tokens || [];
+
+                document.getElementById('manageTokenTotal').textContent = tokens.length;
+                const active = tokens.filter(t => !t.revoked && new Date(t.expires_at) > new Date()).length;
+                document.getElementById('manageTokenActive').textContent = active;
+
+                if (tokens.length === 0) {
+                    document.getElementById('manageTokenList').innerHTML = '<div style="color:var(--text-3);text-align:center;padding:12px;">暂无 Token</div>';
+                    return;
+                }
+
+                document.getElementById('manageTokenList').innerHTML = tokens.map(t => {
+                    const expiresStr = new Date(t.expires_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                    const isExpired = new Date(t.expires_at) < new Date();
+                    const statusText = t.revoked ? '已撤销' : (isExpired ? '已过期' : `至 ${expiresStr}`);
+                    const statusColor = (t.revoked || isExpired) ? 'var(--rose)' : 'var(--text-3)';
+                    return `<div class="manage-token-item">
+                        <span class="mt-scope ${t.scope}">${t.scope_label}</span>
+                        <span class="mt-info">${t.token_short}${t.note ? ' · ' + t.note : ''}</span>
+                        <span class="mt-status" style="color:${statusColor}">${statusText}</span>
+                    </div>`;
+                }).join('');
+            } catch (e) {
+                document.getElementById('manageTokenList').innerHTML = '<div style="color:var(--rose);text-align:center;padding:12px;">加载失败</div>';
+            }
+        }
+
+        // Close manage modal on outside click
+        document.getElementById('manageModal').addEventListener('click', function(e) {
+            if (e.target === this) closeManageModal();
         });
         document.getElementById('publishModal').addEventListener('click', function(e) {
             if (e.target === this) closePublishModal();
         });
 
         // ========== 发布到 CogNexus ==========
-        
+
         function openPublishModal(namespace, name) {
             document.getElementById('publishNamespace').value = `${name} (${namespace})`;
             document.getElementById('publishNamespace').dataset.ns = namespace;
             document.getElementById('publishModal').classList.add('show');
         }
-        
+
         function closePublishModal() {
             document.getElementById('publishModal').classList.remove('show');
         }
-        
+
         async function doPublish() {
             const namespace = document.getElementById('publishNamespace').dataset.ns;
             const cognexusUrl = document.getElementById('publishCognexusUrl').value.trim();
@@ -1504,16 +1947,16 @@
             const tokenCount = parseInt(document.getElementById('publishTokenCount').value) || 10;
             const tokenPrice = parseInt(document.getElementById('publishTokenPrice').value) || 5;
             const tokenScope = document.getElementById('publishTokenScope').value;
-            
+
             if (!username || !password) {
                 alert('请输入 CogNexus 登录凭证');
                 return;
             }
-            
+
             const btn = document.getElementById('publishBtn');
             btn.disabled = true;
             btn.textContent = '发布中...';
-            
+
             try {
                 const res = await fetch(`${API_BASE}/api/hub/publish`, {
                     method: 'POST',
@@ -1531,13 +1974,12 @@
                         }
                     })
                 });
-                
+
                 const data = await res.json();
-                
+
                 if (data.success) {
                     alert(`✅ 发布成功！\n\nAgent ID: ${data.agent_id}\n创建了 ${data.tokens_created} 个 Token\n\n${data.created ? '新建' : '更新'}完成`);
                     closePublishModal();
-                    // 可选：打开 CogNexus 页面
                     if (confirm('是否打开 CogNexus 查看？')) {
                         window.open(data.agent_url, '_blank');
                     }
@@ -1552,153 +1994,8 @@
             }
         }
 
-        // ========== LLM 配置 ==========
-        let _llmConfigNs = '';
+        // ========== Token Management ==========
 
-        async function openLLMConfig(ns) {
-            _llmConfigNs = ns;
-            document.getElementById('llmConfigNs').textContent = ns;
-            // Reset state
-            document.getElementById('llmCustomGroup').style.display = 'none';
-            document.getElementById('llmKeyGroup').style.display = 'none';
-            document.getElementById('llmProfileBaseUrl').value = '';
-            document.getElementById('llmProfileModel').value = '';
-            document.getElementById('llmProfileApiKey').value = '';
-            document.getElementById('llmKeyStatus').textContent = '';
-            document.querySelectorAll('#llmProfilePresets .profile-btn').forEach(b => b.style.border = '');
-
-            // Fetch current config
-            const token = TokenManager.get();
-            try {
-                const res = await fetch(`${API_BASE}/api/profiles/${ns}/llm?token=${token}&ns=default`);
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.base_url || data.model) {
-                        // Try to match a preset
-                        let matched = false;
-                        document.querySelectorAll('#llmProfilePresets .profile-btn[data-base]').forEach(btn => {
-                            if (btn.dataset.base !== 'custom' && btn.dataset.base === data.base_url && btn.dataset.model === data.model) {
-                                btn.style.border = '2px solid var(--accent)';
-                                matched = true;
-                            }
-                        });
-                        if (!matched && data.base_url) {
-                            // Show custom fields
-                            document.getElementById('llmCustomGroup').style.display = 'block';
-                            document.getElementById('llmProfileBaseUrl').value = data.base_url;
-                            document.getElementById('llmProfileModel').value = data.model;
-                            document.querySelectorAll('#llmProfilePresets .profile-btn').forEach(b => {
-                                if (b.dataset.base === 'custom') b.style.border = '2px solid var(--accent)';
-                            });
-                        }
-                        document.getElementById('llmKeyGroup').style.display = 'block';
-                        if (data.has_key) {
-                            document.getElementById('llmKeyStatus').textContent = '已配置 API Key（留空保持不变）';
-                        }
-                    }
-                }
-            } catch (e) {
-                console.error('Load LLM config error:', e);
-            }
-
-            document.getElementById('llmConfigModal').classList.add('show');
-        }
-
-        function selectProfileLLM(btn) {
-            // Clear all highlights
-            document.querySelectorAll('#llmProfilePresets .profile-btn').forEach(b => b.style.border = '');
-            btn.style.border = '2px solid var(--accent)';
-
-            if (btn.dataset.base === 'custom') {
-                document.getElementById('llmCustomGroup').style.display = 'block';
-                document.getElementById('llmProfileBaseUrl').value = '';
-                document.getElementById('llmProfileModel').value = '';
-            } else {
-                document.getElementById('llmCustomGroup').style.display = 'none';
-                document.getElementById('llmProfileBaseUrl').value = btn.dataset.base;
-                document.getElementById('llmProfileModel').value = btn.dataset.model;
-            }
-            document.getElementById('llmKeyGroup').style.display = 'block';
-        }
-
-        async function saveProfileLLM() {
-            const baseUrl = document.getElementById('llmProfileBaseUrl').value.trim();
-            const model = document.getElementById('llmProfileModel').value.trim();
-            const apiKey = document.getElementById('llmProfileApiKey').value.trim();
-
-            if (!baseUrl || !model) {
-                alert('请选择或填写模型配置');
-                return;
-            }
-
-            const token = TokenManager.get();
-            const body = { base_url: baseUrl, model: model };
-            if (apiKey) body.api_key = apiKey;
-
-            try {
-                const res = await fetch(`${API_BASE}/api/profiles/${_llmConfigNs}/llm?token=${token}&ns=default`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert('LLM 配置已保存');
-                    closeLLMConfig();
-                } else {
-                    alert('保存失败: ' + (data.detail || '未知错误'));
-                }
-            } catch (e) {
-                alert('保存失败: ' + e.message);
-            }
-        }
-
-        async function clearProfileLLM() {
-            if (!confirm('确定清除 LLM 配置？将回退到环境变量或 Gateway。')) return;
-            const token = TokenManager.get();
-            try {
-                const res = await fetch(`${API_BASE}/api/profiles/${_llmConfigNs}/llm?token=${token}&ns=default`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ clear: true })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    alert('LLM 配置已清除');
-                    closeLLMConfig();
-                }
-            } catch (e) {
-                alert('清除失败: ' + e.message);
-            }
-        }
-
-        function closeLLMConfig() {
-            document.getElementById('llmConfigModal').classList.remove('show');
-        }
-
-        async function init() {
-            // Debug: 显示当前 namespace
-            console.log('[DEBUG] NAMESPACE:', NAMESPACE, 'URL:', window.location.href);
-            
-            // Load public profile first
-            await loadProfile();
-            
-            const urlToken = new URLSearchParams(window.location.search).get('token');
-            if (urlToken) { document.getElementById('tokenInput').value = urlToken; await verifyToken(); return; }
-            const savedToken = TokenManager.get();
-            if (savedToken) {
-                try {
-                    const res = await fetch(`${API_BASE}/api/auth/check?token=${encodeURIComponent(savedToken)}`);
-                    const data = await res.json();
-                    if (data.valid) { TokenManager.set(savedToken, data); updateUI(data); }
-                    else { TokenManager.clear(); }
-                } catch (e) { console.error('Token validation failed:', e); }
-            }
-        }
-
-        document.getElementById('tokenInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyToken(); });
-
-        // Token 管理
         async function loadTokenList() {
             const token = TokenManager.get();
             try {
@@ -1777,189 +2074,30 @@
             document.getElementById('tokenUrlDisplay').classList.remove('show');
         }
 
-        // ========== 角色管理 ==========
-        
-        async function loadProfileList() {
-            const token = TokenManager.get();
-            const container = document.getElementById('profileList');
-            
-            try {
-                // profiles API 需要明确 ns=default
-                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=default`);
-                if (!res.ok) throw new Error('Failed to load profiles');
-                const data = await res.json();
-                
-                if (!data.profiles || data.profiles.length === 0) {
-                    container.innerHTML = '<div class="empty">暂无角色</div>';
-                    return;
-                }
-                
-                container.innerHTML = data.profiles.map(p => `
-                    <div class="profile-item">
-                        <div class="profile-info">
-                            <div class="profile-name">
-                                ${p.name || p.namespace}
-                                <span class="profile-type ${p.type}">${p.type === 'character' ? '🎭 角色' : '👤 人类'}</span>
-                            </div>
-                            <div class="profile-meta">
-                                ns: ${p.namespace} · ${p.fact_count} 条知识
-                                ${p.title ? ' · ' + p.title : ''}
-                            </div>
-                        </div>
-                        <div class="profile-actions">
-                            <button class="profile-btn" onclick="openLLMConfig('${p.namespace}')">🤖 LLM</button>
-                            <button class="profile-btn" onclick="openPublishModal('${p.namespace}', '${p.name || p.namespace}')">📤 发布</button>
-                            <button class="profile-btn primary" onclick="openProfile('${p.namespace}')">进入</button>
-                            ${p.namespace !== 'default' ? `<button class="profile-btn danger" onclick="deleteProfile('${p.namespace}')">删除</button>` : ''}
-                        </div>
-                    </div>
-                `).join('');
-            } catch (e) {
-                container.innerHTML = '<div class="error">加载失败</div>';
-                console.error('Load profiles error:', e);
+        // ========== Init ==========
+
+        async function init() {
+            console.log('[DEBUG] NAMESPACE:', NAMESPACE, 'URL:', window.location.href);
+
+            await loadProfile();
+
+            // Try loading namespace list even before auth (will show login prompt)
+            loadNamespaces();
+
+            const urlToken = new URLSearchParams(window.location.search).get('token');
+            if (urlToken) { document.getElementById('tokenInput').value = urlToken; await verifyToken(); return; }
+            const savedToken = TokenManager.get();
+            if (savedToken) {
+                try {
+                    const res = await fetch(`${API_BASE}/api/auth/check?token=${encodeURIComponent(savedToken)}`);
+                    const data = await res.json();
+                    if (data.valid) { TokenManager.set(savedToken, data); updateUI(data); }
+                    else { TokenManager.clear(); }
+                } catch (e) { console.error('Token validation failed:', e); }
             }
         }
-        
-        async function createProfile() {
-            const namespace = document.getElementById('newProfileNamespace').value.trim();
-            const type = document.getElementById('newProfileType').value;
-            const name = document.getElementById('newProfileName').value.trim();
-            const title = document.getElementById('newProfileTitle').value.trim();
-            
-            if (!namespace) {
-                alert('请输入 Namespace');
-                return;
-            }
-            
-            // 验证 namespace 格式
-            if (!/^[a-z][a-z0-9_-]*$/.test(namespace)) {
-                alert('Namespace 必须以小写字母开头，只能包含小写字母、数字、下划线和连字符');
-                return;
-            }
-            
-            const token = TokenManager.get();
-            
-            try {
-                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=default`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ namespace, type, name: name || namespace, title })
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    // 清空表单
-                    document.getElementById('newProfileNamespace').value = '';
-                    document.getElementById('newProfileName').value = '';
-                    document.getElementById('newProfileTitle').value = '';
-                    
-                    // 刷新列表
-                    loadProfileList();
-                    
-                    alert(`角色 "${name || namespace}" 创建成功！`);
-                } else {
-                    alert('创建失败: ' + (data.detail || '未知错误'));
-                }
-            } catch (e) {
-                alert('创建失败，请重试');
-                console.error('Create profile error:', e);
-            }
-        }
-        
-        async function openProfile(namespace) {
-            if (namespace === 'default') {
-                // 当前就是 default，刷新即可
-                window.location.href = `/?token=${TokenManager.get()}`;
-                return;
-            }
-            
-            // 1. 先检查本地是否已存储该 namespace 的 token
-            const localToken = TokenManager.getFor(namespace);
-            if (localToken) {
-                // 直接使用本地存储的 token
-                window.location.href = `/?token=${localToken}&ns=${namespace}`;
-                return;
-            }
-            
-            // 2. 本地没有，从服务器查询
-            const token = TokenManager.get();
-            
-            try {
-                const res = await fetch(`${API_BASE}/api/profiles/${namespace}/tokens?token=${token}&ns=default`);
-                const data = await res.json();
-                
-                if (data.tokens && data.tokens.length > 0) {
-                    // 找到一个 full scope 的 token
-                    const fullToken = data.tokens.find(t => t.scope === 'full');
-                    if (fullToken) {
-                        window.location.href = `/?token=${fullToken.token_full}&ns=${namespace}`;
-                        return;
-                    }
-                    // 如果没有 full token，用第一个可用的
-                    const anyToken = data.tokens[0];
-                    window.location.href = `/?token=${anyToken.token_full}&ns=${namespace}`;
-                    return;
-                }
-                
-                // 没有现有 token，提示创建
-                if (confirm(`角色 "${namespace}" 还没有访问 Token，要创建一个吗？`)) {
-                    createProfileTokenAndOpen(namespace);
-                }
-            } catch (e) {
-                // API 可能不存在，直接创建
-                if (confirm(`要为角色 "${namespace}" 创建访问 Token 吗？`)) {
-                    createProfileTokenAndOpen(namespace);
-                }
-            }
-        }
-        
-        async function createProfileTokenAndOpen(namespace) {
-            const token = TokenManager.get();
-            
-            try {
-                const res = await fetch(`${API_BASE}/api/profiles/${namespace}/token?token=${token}&ns=default`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ scope: 'full', duration: '30d' })
-                });
-                
-                const data = await res.json();
-                
-                if (data.success && data.token) {
-                    window.location.href = `/?token=${data.token}&ns=${namespace}`;
-                } else {
-                    alert('创建 Token 失败: ' + (data.detail || '未知错误'));
-                }
-            } catch (e) {
-                alert('操作失败，请重试');
-                console.error('Create profile token error:', e);
-            }
-        }
-        
-        async function deleteProfile(namespace) {
-            if (!confirm(`确定删除角色 "${namespace}"？\n\n⚠️ 此操作不可恢复！`)) return;
-            
-            const deleteData = confirm('是否同时删除该角色的所有知识数据？\n\n选择"确定"将删除所有数据\n选择"取消"仅删除角色配置');
-            
-            const token = TokenManager.get();
-            
-            try {
-                const res = await fetch(`${API_BASE}/api/profiles/${namespace}?token=${token}&ns=default&delete_data=${deleteData}`, {
-                    method: 'DELETE'
-                });
-                
-                const data = await res.json();
-                
-                if (data.success) {
-                    loadProfileList();
-                } else {
-                    alert('删除失败: ' + (data.detail || '未知错误'));
-                }
-            } catch (e) {
-                alert('删除失败，请重试');
-            }
-        }
+
+        document.getElementById('tokenInput').addEventListener('keypress', (e) => { if (e.key === 'Enter') verifyToken(); });
 
         init();
     </script>
