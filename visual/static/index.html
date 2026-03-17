@@ -1859,12 +1859,15 @@
                     const statusText = t.revoked ? '已撤销' : (isExpired ? '已过期' : '可用');
                     const statusColor = (t.revoked || isExpired) ? 'var(--rose)' : 'var(--teal)';
                     const copyBtn = t.url ? `<button class="mt-copy" onclick="copyTokenUrl('${t.url}')" title="复制链接">📋</button>` : '';
-                    return `<div class="manage-token-item">
+                    const revokeBtn = (!t.revoked && !isExpired && window._isFullAccess)
+                        ? `<button class="mt-copy" onclick="revokeToken('${t.token_id}')" title="撤销" style="color:var(--rose);">✕</button>`
+                        : '';
+                    return `<div class="manage-token-item"${t.revoked ? ' style="opacity:0.5;"' : ''}>
                         <span class="mt-scope ${t.scope}">${t.scope_label}</span>
                         <span class="mt-info">${t.token_short}${t.note ? ' · ' + t.note : ''}</span>
                         <span class="mt-status" style="color:${statusColor}">${statusText}</span>
                         <span class="mt-expires">至 ${expiresStr}</span>
-                        ${copyBtn}
+                        ${copyBtn}${revokeBtn}
                     </div>`;
                 }).join('');
             } catch (e) {
@@ -1977,6 +1980,23 @@
                 const data = await res.json();
                 if (data.success) loadManageTokens();
             } catch (e) { alert('撤销失败，请重试'); }
+        }
+
+        async function revokeToken(tokenId) {
+            if (!confirm('确定要撤销这个 Token 吗？撤销后不可恢复。')) return;
+            const token = TokenManager.get();
+            try {
+                const res = await fetch(apiUrl(`/api/tokens/${tokenId}`, {token}), { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    loadManageTokens();
+                    loadProfileQuickInfo();
+                } else {
+                    alert('撤销失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('撤销失败，请重试');
+            }
         }
 
         function copyTokenUrl(url) {

@@ -1409,11 +1409,7 @@ async def action(
 async def list_profiles_api(
     token_info: TokenInfo = Depends(verify_token)
 ):
-    """列出所有 Profiles/Namespaces（仅 default namespace 的 full 权限）"""
-    if token_info.namespace != "default":
-        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
-    if not can_see_private(token_info):
-        raise HTTPException(status_code=403, detail="Full access required")
+    """列出所有 Profiles/Namespaces（任何有效 token 均可查看列表）"""
     
     from profile_manager import ProfileManager
     from cogmate_core import CogmateAgent
