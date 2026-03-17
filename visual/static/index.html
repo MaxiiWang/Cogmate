@@ -557,32 +557,6 @@
             letter-spacing: 0.08em;
             margin-bottom: 16px;
         }
-        .permission-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-            margin-bottom: 40px;
-        }
-        .permission-item {
-            background: var(--bg-s);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 18px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            transition: all 0.25s;
-        }
-        .permission-item.unlocked {
-            border-color: rgba(109,168,155,0.25);
-            background: rgba(109,168,155,0.04);
-        }
-        .permission-icon { font-size: 1.3em; width: 36px; text-align: center; flex-shrink: 0; }
-        .permission-info h4 { color: var(--text-2); font-size: 0.9em; margin-bottom: 3px; }
-        .permission-info p { color: var(--text-3); font-size: 0.8em; }
-        .permission-item.unlocked .permission-info h4 { color: var(--teal); }
-        .permission-status { margin-left: auto; font-size: 1em; }
-
         /* 功能入口 - 不对称网格 */
         .view-cards {
             display: grid;
@@ -727,17 +701,6 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Token 管理 */
-        .token-management { display: none; margin-top: 20px; }
-        .token-management.show { display: block; }
-
-        .token-create-form {
-            background: var(--bg-s);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 16px;
-        }
         .form-row {
             display: flex;
             gap: 12px;
@@ -784,53 +747,6 @@
         .create-btn:hover {
             background: var(--accent-s);
             transform: translateY(-1px);
-        }
-
-        .token-list {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .token-item {
-            background: var(--bg-s);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 14px 18px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .token-item.full { border-left: 2px solid var(--teal); }
-        .token-item.qa_public { border-left: 2px solid var(--blue); }
-        .token-item.browse_public { border-left: 2px solid var(--purple); }
-
-        .token-info { flex: 1; }
-        .token-info .token-id {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--accent-text);
-            font-size: 0.85em;
-        }
-        .token-info .token-meta { font-size: 0.78em; color: var(--text-3); margin-top: 3px; }
-        .token-info .token-note { font-size: 0.82em; color: var(--text-2); margin-top: 3px; }
-        .token-actions { display: flex; gap: 6px; }
-        .token-actions button {
-            padding: 5px 10px;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-            background: transparent;
-            color: var(--text-2);
-            cursor: pointer;
-            font-size: 0.78em;
-            transition: all 0.2s;
-        }
-        .token-actions button:hover {
-            background: var(--bg-t);
-            color: var(--text-1);
-        }
-        .token-actions .revoke-btn:hover {
-            background: rgba(184,134,138,0.12);
-            border-color: rgba(184,134,138,0.3);
-            color: var(--rose);
         }
 
         /* Token URL Modal */
@@ -913,7 +829,19 @@
         .manage-token-item .mt-scope.qa_public { background: rgba(124,153,184,0.15); color: var(--blue); }
         .manage-token-item .mt-scope.browse_public { background: rgba(157,139,184,0.15); color: var(--purple); }
         .manage-token-item .mt-info { flex: 1; color: var(--text-2); }
-        .manage-token-item .mt-status { font-size: 0.8em; color: var(--text-3); }
+        .manage-token-item .mt-status { font-size: 0.8em; }
+        .manage-token-item .mt-expires { font-size: 0.78em; color: var(--text-3); }
+        .manage-token-item .mt-copy {
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-2);
+            cursor: pointer;
+            font-size: 0.78em;
+            transition: all 0.2s;
+        }
+        .manage-token-item .mt-copy:hover { background: var(--bg-t); color: var(--text-1); }
 
         /* Profile btn (used in LLM presets) */
         .profile-btn {
@@ -951,7 +879,6 @@
             .view-cards { grid-template-columns: 1fr; }
             .chat-card { grid-column: span 1; flex-direction: column; }
             .chat-card .card-text { width: 100%; }
-            .permission-grid { grid-template-columns: 1fr; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); }
             .features-list { flex-direction: column; }
             .form-row { flex-direction: column; }
@@ -975,7 +902,7 @@
                     <div class="loading" style="padding:12px;font-size:0.85em;">加载中...</div>
                 </div>
                 <div class="ns-dropdown-divider"></div>
-                <div class="ns-dropdown-create" onclick="promptCreateProfile()">
+                <div class="ns-dropdown-create" id="nsDropdownCreate" onclick="promptCreateProfile()">
                     <span>＋</span> <span>新建角色</span>
                 </div>
             </div>
@@ -1025,7 +952,7 @@
 
         <!-- Management Modal (Profile + LLM + Tokens) -->
         <div class="modal-overlay" id="manageModal">
-            <div class="modal-content" style="max-width:520px;">
+            <div class="modal-content" style="max-width:720px;">
                 <div class="modal-header">
                     <h3>⚙ 管理</h3>
                     <button class="modal-close" onclick="closeManageModal()">×</button>
@@ -1095,14 +1022,55 @@
                 </div>
                 <!-- Tokens Tab -->
                 <div class="manage-tab-content" id="manageTokensTab">
-                    <div style="display:flex;gap:16px;margin-bottom:16px;">
-                        <div style="text-align:center;padding:12px 18px;background:var(--bg);border-radius:8px;flex:1;">
+                    <div id="manageTokensAdminNotice" style="display:none;padding:10px 14px;background:rgba(212,160,84,0.08);border:1px solid rgba(212,160,84,0.2);border-radius:6px;margin-bottom:14px;font-size:0.82em;color:var(--accent-text);">需要全量访问权限才能创建和管理 Token</div>
+                    <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+                        <div style="text-align:center;padding:10px 16px;background:var(--bg);border-radius:8px;flex:1;min-width:70px;">
                             <div style="font-size:0.72em;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">总计</div>
                             <div style="font-size:1.4em;font-weight:700;color:var(--accent-text);" id="manageTokenTotal">-</div>
                         </div>
-                        <div style="text-align:center;padding:12px 18px;background:var(--bg);border-radius:8px;flex:1;">
+                        <div style="text-align:center;padding:10px 16px;background:var(--bg);border-radius:8px;flex:1;min-width:70px;">
                             <div style="font-size:0.72em;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">活跃</div>
                             <div style="font-size:1.4em;font-weight:700;color:var(--teal);" id="manageTokenActive">-</div>
+                        </div>
+                        <div style="text-align:center;padding:10px 16px;background:var(--bg);border-radius:8px;flex:1;min-width:70px;">
+                            <div style="font-size:0.72em;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">问答</div>
+                            <div style="font-size:1.4em;font-weight:700;color:var(--blue);" id="manageTokenQa">-</div>
+                        </div>
+                        <div style="text-align:center;padding:10px 16px;background:var(--bg);border-radius:8px;flex:1;min-width:70px;">
+                            <div style="font-size:0.72em;color:var(--text-3);text-transform:uppercase;margin-bottom:4px;">浏览</div>
+                            <div style="font-size:1.4em;font-weight:700;color:var(--purple);" id="manageTokenBrowse">-</div>
+                        </div>
+                    </div>
+                    <div id="manageTokenCreateSection">
+                        <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:14px;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>权限类型</label>
+                                    <select id="newTokenScope">
+                                        <option value="qa_public">💬 问答服务</option>
+                                        <option value="browse_public">👁️ 公开浏览</option>
+                                        <option value="full">🔓 全量访问</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>有效期</label>
+                                    <select id="newTokenDuration">
+                                        <option value="1d">1 天</option>
+                                        <option value="7d" selected>7 天</option>
+                                        <option value="30d">30 天</option>
+                                        <option value="90d">90 天</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>问答次数</label>
+                                    <input type="number" id="newTokenQaLimit" placeholder="默认20" min="0">
+                                </div>
+                                <div class="form-group">
+                                    <label>备注</label>
+                                    <input type="text" id="newTokenNote" placeholder="如：给朋友A">
+                                </div>
+                            </div>
+                            <button class="create-btn" onclick="createToken()">创建 Token</button>
                         </div>
                     </div>
                     <div class="manage-token-list" id="manageTokenList">
@@ -1173,55 +1141,32 @@
 
         <div class="divider"></div>
 
-        <!-- 权限 -->
-        <div class="animate-in delay-2">
-            <div class="section-label">当前权限</div>
-            <div class="permission-grid" id="permissionGrid">
-                <div class="permission-item" id="permChat">
-                    <div class="permission-icon">💬</div>
-                    <div class="permission-info">
-                        <h4>Chat 问答</h4>
-                        <p>向知识库提问</p>
-                    </div>
-                    <div class="permission-status">🔒</div>
-                </div>
-                <div class="permission-item" id="permBrowse">
-                    <div class="permission-icon">👁️</div>
-                    <div class="permission-info">
-                        <h4>浏览图谱</h4>
-                        <p>查看知识结构</p>
-                    </div>
-                    <div class="permission-status">🔒</div>
-                </div>
-            </div>
-        </div>
-
         <!-- 功能入口 -->
         <div class="animate-in delay-3">
             <div class="section-label">功能入口</div>
             <div class="view-cards">
-                <a class="view-card locked" id="graphCard" href="javascript:void(0)">
+                <a class="view-card locked" id="graphCard" href="javascript:void(0)" title="需要浏览权限才能使用">
                     <div class="lock-badge">🔒</div>
                     <div class="icon">🕸️</div>
                     <h3>Graph View</h3>
                     <p>力导向图，探索知识关联</p>
                     <div class="scope-required">需要浏览权限</div>
                 </a>
-                <a class="view-card locked" id="treeCard" href="javascript:void(0)">
+                <a class="view-card locked" id="treeCard" href="javascript:void(0)" title="需要浏览权限才能使用">
                     <div class="lock-badge">🔒</div>
                     <div class="icon">🌳</div>
                     <h3>Tree View</h3>
                     <p>抽象层树形，理解规律结构</p>
                     <div class="scope-required">需要浏览权限</div>
                 </a>
-                <a class="view-card locked" id="timelineCard" href="javascript:void(0)">
+                <a class="view-card locked" id="timelineCard" href="javascript:void(0)" title="需要浏览权限才能使用">
                     <div class="lock-badge">🔒</div>
                     <div class="icon">📅</div>
                     <h3>Timeline</h3>
                     <p>时间轴，回顾知识演变</p>
                     <div class="scope-required">需要浏览权限</div>
                 </a>
-                <a class="view-card chat-card locked" id="chatCard" href="javascript:void(0)">
+                <a class="view-card chat-card locked" id="chatCard" href="javascript:void(0)" title="需要问答权限才能使用">
                     <div class="lock-badge">🔒</div>
                     <div class="icon">💬</div>
                     <div class="card-text">
@@ -1260,44 +1205,6 @@
             </div>
         </div>
 
-        <!-- Token 管理 -->
-        <div class="token-management" id="tokenManagement">
-            <div class="section-label">Token 管理</div>
-            <div class="token-create-form">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>权限类型</label>
-                        <select id="newTokenScope">
-                            <option value="qa_public">💬 问答服务</option>
-                            <option value="browse_public">👁️ 公开浏览</option>
-                            <option value="full">🔓 全量访问</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>有效期</label>
-                        <select id="newTokenDuration">
-                            <option value="1d">1 天</option>
-                            <option value="7d" selected>7 天</option>
-                            <option value="30d">30 天</option>
-                            <option value="90d">90 天</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>问答次数</label>
-                        <input type="number" id="newTokenQaLimit" placeholder="默认20" min="0">
-                    </div>
-                    <div class="form-group">
-                        <label>备注</label>
-                        <input type="text" id="newTokenNote" placeholder="如：给朋友A">
-                    </div>
-                </div>
-                <button class="create-btn" onclick="createToken()">创建 Token</button>
-            </div>
-            <div class="token-list" id="tokenList">
-                <div class="loading"><div class="spinner"></div>加载中...</div>
-            </div>
-        </div>
-
         <!-- Token URL Modal -->
         <div class="token-url-display" id="tokenUrlDisplay" onclick="closeUrlDisplay(event)">
             <div class="token-url-box" onclick="event.stopPropagation()">
@@ -1331,6 +1238,8 @@
             }
             return url.toString();
         }
+
+        window._isFullAccess = false;
 
         const TokenManager = {
             STORAGE_KEY: 'cogmate_tokens',
@@ -1400,7 +1309,21 @@
             // Update current ns display
             document.getElementById('nsCurrentName').textContent = currentNs;
 
+            // Toggle create button based on access
+            const createEl = document.getElementById('nsDropdownCreate');
+            if (createEl) createEl.style.display = window._isFullAccess ? '' : 'none';
+
             if (!token) {
+                // Try without token for read-only browsing
+                try {
+                    const res = await fetch(`${API_BASE}/api/profiles?ns=default`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        const profiles = data.profiles || [];
+                        renderNsProfiles(profiles, false);
+                        return;
+                    }
+                } catch (e) {}
                 document.getElementById('nsDropdownList').innerHTML = '<div style="padding:10px 16px;font-size:0.85em;color:var(--text-3);">登录后可切换角色</div>';
                 return;
             }
@@ -1410,36 +1333,39 @@
                 if (!res.ok) throw new Error('Failed');
                 const data = await res.json();
                 const profiles = data.profiles || [];
-
-                // Update current ns icon
-                const currentProfile = profiles.find(p => p.namespace === currentNs);
-                if (currentProfile) {
-                    document.getElementById('nsTypeIcon').textContent = currentProfile.type === 'character' ? '🎭' : '👤';
-                    document.getElementById('nsCurrentName').textContent = currentProfile.name || currentNs;
-                }
-
-                const listEl = document.getElementById('nsDropdownList');
-                if (profiles.length === 0) {
-                    listEl.innerHTML = '<div style="padding:10px 16px;font-size:0.85em;color:var(--text-3);">暂无角色</div>';
-                    return;
-                }
-
-                listEl.innerHTML = profiles.map(p => {
-                    const isActive = p.namespace === currentNs;
-                    const icon = p.type === 'character' ? '🎭' : '👤';
-                    const deleteBtn = p.namespace !== 'default'
-                        ? `<span class="ns-item-delete" onclick="event.stopPropagation();deleteNsProfile('${p.namespace}')" title="删除">✕</span>`
-                        : '';
-                    return `<div class="ns-dropdown-item${isActive ? ' active' : ''}" onclick="switchNamespace('${p.namespace}')">
-                        <span class="ns-item-icon">${icon}</span>
-                        <span class="ns-item-name">${p.name || p.namespace}</span>
-                        ${deleteBtn}
-                    </div>`;
-                }).join('');
+                renderNsProfiles(profiles, window._isFullAccess);
             } catch (e) {
                 console.error('Load namespaces error:', e);
                 document.getElementById('nsDropdownList').innerHTML = '<div style="padding:10px 16px;font-size:0.85em;color:var(--text-3);">加载失败</div>';
             }
+        }
+
+        function renderNsProfiles(profiles, showAdmin) {
+            // Update current ns icon
+            const currentProfile = profiles.find(p => p.namespace === currentNs);
+            if (currentProfile) {
+                document.getElementById('nsTypeIcon').textContent = currentProfile.type === 'character' ? '🎭' : '👤';
+                document.getElementById('nsCurrentName').textContent = currentProfile.name || currentNs;
+            }
+
+            const listEl = document.getElementById('nsDropdownList');
+            if (profiles.length === 0) {
+                listEl.innerHTML = '<div style="padding:10px 16px;font-size:0.85em;color:var(--text-3);">暂无角色</div>';
+                return;
+            }
+
+            listEl.innerHTML = profiles.map(p => {
+                const isActive = p.namespace === currentNs;
+                const icon = p.type === 'character' ? '🎭' : '👤';
+                const deleteBtn = (showAdmin && p.namespace !== 'default')
+                    ? `<span class="ns-item-delete" onclick="event.stopPropagation();deleteNsProfile('${p.namespace}')" title="删除">✕</span>`
+                    : '';
+                return `<div class="ns-dropdown-item${isActive ? ' active' : ''}" onclick="switchNamespace('${p.namespace}')">
+                    <span class="ns-item-icon">${icon}</span>
+                    <span class="ns-item-name">${p.name || p.namespace}</span>
+                    ${deleteBtn}
+                </div>`;
+            }).join('');
         }
 
         function switchNamespace(ns) {
@@ -1566,15 +1492,13 @@
                 `;
             }
 
-            updatePermissionItem('permChat', permissions.chat);
-            updatePermissionItem('permBrowse', permissions.browse);
-
             const token = TokenManager.get();
 
             const chatCard = document.getElementById('chatCard');
             if (permissions.chat) {
                 chatCard.classList.remove('locked');
                 chatCard.querySelector('.lock-badge').textContent = '✅';
+                chatCard.removeAttribute('title');
                 chatCard.href = `/chat.html?token=${token}${NAMESPACE !== 'default' ? '&ns=' + NAMESPACE : ''}`;
                 const qaStats = authInfo.qa_stats;
                 if (qaStats && !qaStats.unlimited) {
@@ -1595,6 +1519,7 @@
                 if (permissions.browse) {
                     card.classList.remove('locked');
                     card.querySelector('.lock-badge').textContent = '✅';
+                    card.removeAttribute('title');
                     card.href = `${viewUrls[id]}?token=${token}${nsParam}`;
                 }
             });
@@ -1603,23 +1528,18 @@
                 document.getElementById('dashboardContent').classList.add('show');
                 loadDashboardData(token, permissions.full_access);
             }
-            if (permissions.full_access) {
-                document.getElementById('tokenManagement').classList.add('show');
+
+            // Show manage button for all authenticated users
+            if (authInfo.valid) {
                 document.getElementById('profileManageBtn').style.display = 'inline-block';
-                loadTokenList();
-                // Load namespace list for header switcher
                 loadNamespaces();
-                // Load quick info
+            }
+
+            if (permissions.full_access) {
+                window._isFullAccess = true;
                 loadProfileQuickInfo();
             }
             if (authInfo.valid) document.getElementById('tokenSection').style.display = 'none';
-        }
-
-        function updatePermissionItem(id, unlocked) {
-            const item = document.getElementById(id);
-            const status = item.querySelector('.permission-status');
-            if (unlocked) { item.classList.add('unlocked'); status.textContent = '✅'; }
-            else { item.classList.remove('unlocked'); status.textContent = '🔒'; }
         }
 
         async function loadDashboardData(token, isFullAccess) {
@@ -1717,6 +1637,22 @@
 
             // Fill tokens tab
             loadManageTokens();
+
+            // Disable save buttons for non-admin
+            const saveBtns = modal.querySelectorAll('.btn-save');
+            saveBtns.forEach(btn => {
+                if (!window._isFullAccess) {
+                    btn.disabled = true;
+                    btn.title = '需要全量访问权限才能修改配置';
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                } else {
+                    btn.disabled = false;
+                    btn.title = '';
+                    btn.style.opacity = '';
+                    btn.style.cursor = '';
+                }
+            });
 
             // Reset to first tab
             switchManageTab(document.querySelector('.manage-tab-btn'), 'manageProfileTab');
@@ -1884,6 +1820,17 @@
 
         async function loadManageTokens() {
             const token = TokenManager.get();
+            const createSection = document.getElementById('manageTokenCreateSection');
+            const notice = document.getElementById('manageTokensAdminNotice');
+
+            if (!window._isFullAccess) {
+                if (createSection) createSection.style.display = 'none';
+                if (notice) notice.style.display = 'block';
+            } else {
+                if (createSection) createSection.style.display = 'block';
+                if (notice) notice.style.display = 'none';
+            }
+
             if (!token) {
                 document.getElementById('manageTokenList').innerHTML = '<div style="color:var(--text-3);text-align:center;padding:12px;">请先登录</div>';
                 return;
@@ -1894,9 +1841,12 @@
                 const data = await res.json();
                 const tokens = data.tokens || [];
 
+                // Stats
                 document.getElementById('manageTokenTotal').textContent = tokens.length;
-                const active = tokens.filter(t => !t.revoked && new Date(t.expires_at) > new Date()).length;
-                document.getElementById('manageTokenActive').textContent = active;
+                const active = tokens.filter(t => !t.revoked && new Date(t.expires_at) > new Date());
+                document.getElementById('manageTokenActive').textContent = active.length;
+                document.getElementById('manageTokenQa').textContent = tokens.filter(t => t.scope === 'qa_public').length;
+                document.getElementById('manageTokenBrowse').textContent = tokens.filter(t => t.scope === 'browse_public').length;
 
                 if (tokens.length === 0) {
                     document.getElementById('manageTokenList').innerHTML = '<div style="color:var(--text-3);text-align:center;padding:12px;">暂无 Token</div>';
@@ -1906,12 +1856,15 @@
                 document.getElementById('manageTokenList').innerHTML = tokens.map(t => {
                     const expiresStr = new Date(t.expires_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
                     const isExpired = new Date(t.expires_at) < new Date();
-                    const statusText = t.revoked ? '已撤销' : (isExpired ? '已过期' : `至 ${expiresStr}`);
-                    const statusColor = (t.revoked || isExpired) ? 'var(--rose)' : 'var(--text-3)';
+                    const statusText = t.revoked ? '已撤销' : (isExpired ? '已过期' : '可用');
+                    const statusColor = (t.revoked || isExpired) ? 'var(--rose)' : 'var(--teal)';
+                    const copyBtn = t.url ? `<button class="mt-copy" onclick="copyTokenUrl('${t.url}')" title="复制链接">📋</button>` : '';
                     return `<div class="manage-token-item">
                         <span class="mt-scope ${t.scope}">${t.scope_label}</span>
                         <span class="mt-info">${t.token_short}${t.note ? ' · ' + t.note : ''}</span>
                         <span class="mt-status" style="color:${statusColor}">${statusText}</span>
+                        <span class="mt-expires">至 ${expiresStr}</span>
+                        ${copyBtn}
                     </div>`;
                 }).join('');
             } catch (e) {
@@ -1994,41 +1947,6 @@
             }
         }
 
-        // ========== Token Management ==========
-
-        async function loadTokenList() {
-            const token = TokenManager.get();
-            try {
-                const res = await fetch(apiUrl('/api/tokens', {token}));
-                const data = await res.json();
-                renderTokenList(data.tokens || []);
-            } catch (e) { document.getElementById('tokenList').innerHTML = '<div style="color:var(--rose)">加载失败</div>'; }
-        }
-
-        function renderTokenList(tokens) {
-            if (tokens.length === 0) {
-                document.getElementById('tokenList').innerHTML = '<div style="color:var(--text-3);text-align:center;padding:20px">暂无 Token</div>';
-                return;
-            }
-            document.getElementById('tokenList').innerHTML = tokens.map(t => {
-                const expiresStr = new Date(t.expires_at).toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-                const qaStr = t.qa_unlimited ? '无限' : `${t.qa_used}/${t.qa_limit}`;
-                return `
-                    <div class="token-item ${t.scope}">
-                        <div class="token-info">
-                            <div class="token-id">${t.token_short} <span style="color:var(--text-3)">${t.scope_label}</span></div>
-                            <div class="token-meta">过期: ${expiresStr} · 访问: ${t.access_count}次 · 问答: ${qaStr}</div>
-                            ${t.note ? `<div class="token-note">📝 ${t.note}</div>` : ''}
-                        </div>
-                        <div class="token-actions">
-                            <button onclick="copyTokenUrl('${t.url}')">📋 复制链接</button>
-                            <button class="revoke-btn" onclick="revokeToken('${t.token_short.replace('...', '')}')">撤销</button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
         async function createToken() {
             const token = TokenManager.get();
             const scope = document.getElementById('newTokenScope').value;
@@ -2045,7 +1963,7 @@
                 if (data.success) {
                     document.getElementById('newTokenNote').value = '';
                     document.getElementById('newTokenQaLimit').value = '';
-                    loadTokenList();
+                    loadManageTokens();
                     copyTokenUrl(data.url);
                 } else { alert('创建失败: ' + (data.detail || '未知错误')); }
             } catch (e) { alert('创建失败，请重试'); }
@@ -2057,7 +1975,7 @@
             try {
                 const res = await fetch(apiUrl(`/api/tokens/${tokenId}`, {token}), { method: 'DELETE' });
                 const data = await res.json();
-                if (data.success) loadTokenList();
+                if (data.success) loadManageTokens();
             } catch (e) { alert('撤销失败，请重试'); }
         }
 
