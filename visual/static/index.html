@@ -1856,29 +1856,47 @@
                 if (!res.ok) throw new Error('Failed');
                 _cognexusConfig = await res.json();
 
-                // Auto-detect: if not published, check CogNexus for existing agent
-                if (!_cognexusConfig.published) {
+                // Auto-detect: if not published but has saved credentials, verify ownership via CogNexus login
+                if (!_cognexusConfig.published && _cognexusConfig.cognexus_username) {
                     try {
                         const cognexusUrl = (_cognexusConfig.cognexus_url || 'https://wielding.ai').replace(/\/$/, '');
-                        const detectRes = await fetch(`${cognexusUrl}/api/agents`);
-                        if (detectRes.ok) {
-                            const detectData = await detectRes.json();
-                            const agents = detectData.agents || [];
-                            const sourceUrl = window.location.origin || 'http://124.221.254.71:8000';
-                            // Match by namespace + endpoint containing our host
-                            const match = agents.find(a =>
-                                a.namespace === currentNs &&
-                                (a.endpoint_url || '').includes('124.221.254.71')
-                            );
-                            if (match) {
-                                _cognexusConfig.published = true;
-                                _cognexusConfig.agent_id = match.agent_id;
-                                // Sync back to profile
-                                fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=${currentNs}`, {
-                                    method: 'PUT',
-                                    headers: {'Content-Type': 'application/json'},
-                                    body: JSON.stringify({ published: true, agent_id: match.agent_id })
-                                }).catch(() => {});
+                        // 1. Login to CogNexus with saved credentials
+                        const loginRes = await fetch(`${cognexusUrl}/api/auth/login`, {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({
+                                username: _cognexusConfig.cognexus_username,
+                                password: _cognexusConfig.cognexus_password || ''
+                            })
+                        });
+                        if (loginRes.ok) {
+                            const loginData = await loginRes.json();
+                            const cnxJwt = loginData.token;
+                            const cnxUserId = loginData.user?.user_id || loginData.user_id;
+                            if (cnxJwt) {
+                                // 2. Get my agents (owned by this user)
+                                const agentsRes = await fetch(`${cognexusUrl}/api/agents`, {
+                                    headers: {'Authorization': `Bearer ${cnxJwt}`}
+                                });
+                                if (agentsRes.ok) {
+                                    const agentsData = await agentsRes.json();
+                                    const agents = agentsData.agents || [];
+                                    // 3. Find agent matching namespace + owned by me
+                                    const match = agents.find(a =>
+                                        a.namespace === currentNs &&
+                                        a.owner_id === cnxUserId
+                                    );
+                                    if (match) {
+                                        _cognexusConfig.published = true;
+                                        _cognexusConfig.agent_id = match.agent_id;
+                                        // Sync back to profile
+                                        fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=${currentNs}`, {
+                                            method: 'PUT',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({ published: true, agent_id: match.agent_id })
+                                        }).catch(() => {});
+                                    }
+                                }
                             }
                         }
                     } catch (e2) { /* ignore detection errors */ }
@@ -2014,8 +2032,10 @@
             const token = TokenManager.get();
             if (!token) { alert('请先登录'); return; }
 
+            const cnxPwd = document.getElementById('cnxPassword').value;
             const data = {
                 cognexus_username: document.getElementById('cnxUsername').value.trim(),
+                cognexus_password: cnxPwd || undefined,  // only save if provided
                 react_enabled: document.getElementById('cnxReactEnabled').checked,
                 react_price: parseInt(document.getElementById('cnxReactPrice').value) || 20,
                 token_products: [
