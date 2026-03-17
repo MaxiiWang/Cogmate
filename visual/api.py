@@ -1726,6 +1726,319 @@ async def create_profile_token_api(
     }
 
 
+# ==================== CogNexus 集成 ====================
+
+
+@app.get("/api/profiles/{namespace}/cognexus")
+async def get_profile_cognexus(namespace: str, token_info: TokenInfo = Depends(verify_token)):
+    """获取 Profile 的 CogNexus 配置"""
+    from profile_manager import ProfileManager
+
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    # Return cognexus config with defaults
+    cognexus = config.get("cognexus", {})
+    defaults = {
+        "published": False,
+        "cognexus_url": "https://wielding.ai",
+        "agent_id": "",
+        "react_enabled": True,
+        "react_price": 20,
+        "token_products": [
+            {
+                "type": "qa",
+                "enabled": True,
+                "scope": "qa_public",
+                "qa_limit": 20,
+                "price": 10,
+                "duration": "30d",
+                "auto_stock": 10
+            },
+            {
+                "type": "browse",
+                "enabled": True,
+                "scope": "browse_public",
+                "price": 5,
+                "duration": "15d",
+                "auto_stock": 10
+            }
+        ]
+    }
+
+    # Merge defaults with saved config
+    result = {**defaults, **cognexus}
+
+    # Get current token stock counts by scope
+    conn = get_sqlite()
+    cursor = conn.cursor()
+    stock = {}
+    for scope in ["qa_public", "browse_public", "full"]:
+        cursor.execute(
+            "SELECT COUNT(*) FROM visual_tokens WHERE namespace = ? AND scope = ? AND revoked = 0 AND expires_at > datetime('now')",
+            (namespace, scope)
+        )
+        stock[scope] = cursor.fetchone()[0]
+    conn.close()
+
+    result["stock"] = stock
+    return result
+
+
+@app.put("/api/profiles/{namespace}/cognexus")
+async def update_profile_cognexus(namespace: str, request: Request, token_info: TokenInfo = Depends(verify_token)):
+    """更新 Profile 的 CogNexus 配置"""
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+
+    from profile_manager import ProfileManager
+
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    data = await request.json()
+
+    # Only allow updating specific cognexus fields
+    allowed_keys = [
+        "cognexus_url", "react_enabled", "react_price",
+        "token_products", "cognexus_username"
+    ]
+    cognexus = config.get("cognexus", {})
+    for key in allowed_keys:
+        if key in data:
+            cognexus[key] = data[key]
+
+    config["cognexus"] = cognexus
+    pm.save_profile_config(namespace, config)
+
+    return {"success": True, "message": "CogNexus 配置已保存"}
+
+
+@app.post("/api/profiles/{namespace}/cognexus/publish")
+async def publish_profile_cognexus(namespace: str, request: Request, token_info: TokenInfo = Depends(verify_token)):
+    """发布或更新 Agent 到 CogNexus"""
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+
+    import httpx
+    from profile_manager import ProfileManager
+    from visual_token import generate_token
+
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    data = await request.json()
+    username = data.get("cognexus_username", "")
+    password = data.get("cognexus_password", "")
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="请输入 CogNexus 登录凭证")
+
+    cognexus = config.get("cognexus", {})
+    cognexus_url = cognexus.get("cognexus_url", "https://wielding.ai").rstrip("/")
+
+    # Get profile info
+    identity = config.get("identity", {})
+    profile_data = {
+        "name": identity.get("name", namespace),
+        "title": identity.get("title", ""),
+        "type": config.get("type", "human"),
+        "avatar": identity.get("avatar", ""),
+        "bio": identity.get("bio", identity.get("title", ""))
+    }
+
+    # Get fact count
+    conn = get_sqlite()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM facts WHERE namespace = ?", (namespace,))
+    profile_data["fact_count"] = cursor.fetchone()[0]
+    conn.close()
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Login to CogNexus
+            login_res = await client.post(
+                f"{cognexus_url}/api/auth/login",
+                json={"username": username, "password": password}
+            )
+            if login_res.status_code != 200:
+                return {"success": False, "error": "CogNexus 登录失败，请检查用户名密码"}
+
+            cog_token = login_res.json().get("token")
+            if not cog_token:
+                return {"success": False, "error": "CogNexus 登录失败，未获取到 token"}
+
+            # Generate tokens based on token_products config
+            token_products = cognexus.get("token_products", [])
+            tokens = []
+            react_price = cognexus.get("react_price", 20) if cognexus.get("react_enabled", True) else 0
+
+            for product in token_products:
+                if not product.get("enabled", True):
+                    continue
+                count = product.get("auto_stock", 10)
+                scope = product.get("scope", "qa_public")
+                duration = product.get("duration", "30d")
+                price = product.get("price", 5)
+                qa_limit = product.get("qa_limit", 20) if scope == "qa_public" else -1
+
+                for _ in range(count):
+                    result = generate_token(scope=scope, duration=duration, namespace=namespace)
+                    if result and result.get("token"):
+                        tokens.append({
+                            "value": result["token"],
+                            "scope": scope,
+                            "qa_limit": qa_limit,
+                            "unit_price": price
+                        })
+
+            if not tokens:
+                return {"success": False, "error": "Token 创建失败"}
+
+            # Push to CogNexus
+            import socket
+            source_url = "http://124.221.254.71:8000"
+
+            import_res = await client.post(
+                f"{cognexus_url}/api/agents/import",
+                headers={"Authorization": f"Bearer {cog_token}"},
+                json={
+                    "source_url": source_url,
+                    "namespace": namespace,
+                    "profile": profile_data,
+                    "tokens": tokens,
+                    "price_react": react_price
+                }
+            )
+
+            if import_res.status_code != 200:
+                return {"success": False, "error": f"推送失败: {import_res.text}"}
+
+            import_data = import_res.json()
+
+            # Update profile config
+            cognexus["published"] = True
+            cognexus["agent_id"] = import_data.get("agent_id", "")
+            cognexus["cognexus_username"] = username
+            config["cognexus"] = cognexus
+            pm.save_profile_config(namespace, config)
+
+            return {
+                "success": True,
+                "agent_id": import_data.get("agent_id"),
+                "agent_url": f"{cognexus_url}{import_data.get('agent_url', '')}",
+                "tokens_created": len(tokens),
+                "created": import_data.get("created", True)
+            }
+
+    except httpx.RequestError as e:
+        return {"success": False, "error": f"网络错误: {str(e)}"}
+    except Exception as e:
+        logger.error(f"发布失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/profiles/{namespace}/cognexus/restock")
+async def restock_tokens(namespace: str, request: Request, token_info: TokenInfo = Depends(verify_token)):
+    """补货 Token 并推送到 CogNexus"""
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+
+    import httpx
+    from profile_manager import ProfileManager
+    from visual_token import generate_token
+
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    data = await request.json()
+    scope = data.get("scope", "qa_public")
+    count = data.get("count", 10)
+
+    cognexus = config.get("cognexus", {})
+    agent_id = cognexus.get("agent_id")
+    if not agent_id:
+        raise HTTPException(status_code=400, detail="尚未发布到 CogNexus")
+
+    cognexus_url = cognexus.get("cognexus_url", "https://wielding.ai").rstrip("/")
+    username = cognexus.get("cognexus_username", "")
+    password = data.get("cognexus_password", "")
+
+    if not username or not password:
+        raise HTTPException(status_code=400, detail="需要 CogNexus 凭证")
+
+    # Find matching product config for pricing
+    token_products = cognexus.get("token_products", [])
+    price = 5
+    duration = "30d"
+    qa_limit = 20 if scope == "qa_public" else -1
+    for product in token_products:
+        if product.get("scope") == scope:
+            price = product.get("price", 5)
+            duration = product.get("duration", "30d")
+            qa_limit = product.get("qa_limit", 20) if scope == "qa_public" else -1
+            break
+
+    # Generate tokens
+    tokens = []
+    for _ in range(count):
+        result = generate_token(scope=scope, duration=duration, namespace=namespace)
+        if result and result.get("token"):
+            tokens.append({
+                "value": result["token"],
+                "scope": scope,
+                "qa_limit": qa_limit,
+                "unit_price": price
+            })
+
+    if not tokens:
+        return {"success": False, "error": "Token 创建失败"}
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Login
+            login_res = await client.post(
+                f"{cognexus_url}/api/auth/login",
+                json={"username": username, "password": password}
+            )
+            if login_res.status_code != 200:
+                return {"success": False, "error": "CogNexus 登录失败"}
+
+            cog_token = login_res.json().get("token")
+            if not cog_token:
+                return {"success": False, "error": "CogNexus 登录失败"}
+
+            # Push tokens
+            res = await client.post(
+                f"{cognexus_url}/api/agents/{agent_id}/tokens",
+                headers={"Authorization": f"Bearer {cog_token}"},
+                json={"tokens": tokens}
+            )
+
+            if res.status_code != 200:
+                return {"success": False, "error": f"推送失败: {res.text}"}
+
+            return {
+                "success": True,
+                "tokens_created": len(tokens),
+                "scope": scope
+            }
+
+    except httpx.RequestError as e:
+        return {"success": False, "error": f"网络错误: {str(e)}"}
+    except Exception as e:
+        logger.error(f"补货失败: {e}")
+        return {"success": False, "error": str(e)}
+
+
 # ==================== 启动 ====================
 
 if __name__ == "__main__":

@@ -961,6 +961,7 @@
                     <button class="manage-tab-btn active" onclick="switchManageTab(this,'manageProfileTab')">个人资料</button>
                     <button class="manage-tab-btn" onclick="switchManageTab(this,'manageLlmTab')">🤖 LLM</button>
                     <button class="manage-tab-btn" onclick="switchManageTab(this,'manageTokensTab')">🎫 Tokens</button>
+                    <button class="manage-tab-btn" onclick="switchManageTab(this,'manageCognexusTab');loadCogNexusConfig()">🌐 CogNexus</button>
                 </div>
                 <!-- Profile Tab -->
                 <div class="manage-tab-content active" id="manageProfileTab">
@@ -1077,53 +1078,11 @@
                         <div class="loading"><div class="spinner"></div>加载中...</div>
                     </div>
                 </div>
-            </div>
-        </div>
-
-        <!-- 发布到 CogNexus 弹窗 -->
-        <div class="modal-overlay" id="publishModal">
-            <div class="modal-content" style="max-width: 420px;">
-                <div class="modal-header">
-                    <h3>📤 发布到 CogNexus</h3>
-                    <button class="modal-close" onclick="closePublishModal()">×</button>
-                </div>
-                <div class="form-group">
-                    <label>角色</label>
-                    <input type="text" id="publishNamespace" readonly style="background: var(--bg-secondary);">
-                </div>
-                <input type="hidden" id="publishCognexusUrl" value="https://wielding.ai">
-                <div class="form-group">
-                    <label>CogNexus 用户名</label>
-                    <input type="text" id="publishUsername" placeholder="你的 CogNexus 用户名">
-                </div>
-                <div class="form-group">
-                    <label>CogNexus 密码</label>
-                    <input type="password" id="publishPassword" placeholder="密码">
-                </div>
-                <hr style="border: none; border-top: 1px solid var(--text-3); margin: 16px 0;">
-                <div class="form-group">
-                    <label>Token 配置</label>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                        <div>
-                            <label style="font-size: 0.8em;">创建数量</label>
-                            <input type="number" id="publishTokenCount" value="10" min="1" max="100" style="width: 100%;">
-                        </div>
-                        <div>
-                            <label style="font-size: 0.8em;">单价 (ATP)</label>
-                            <input type="number" id="publishTokenPrice" value="5" min="1" style="width: 100%;">
-                        </div>
+                <!-- CogNexus Tab -->
+                <div class="manage-tab-content" id="manageCognexusTab">
+                    <div id="cognexusContent">
+                        <div class="loading"><div class="spinner"></div>加载中...</div>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label style="font-size: 0.8em;">类型</label>
-                    <select id="publishTokenScope" style="width: 100%;">
-                        <option value="qa_public">💬 问答服务 (20次问答)</option>
-                        <option value="full">🔓 全量访问 (无限制)</option>
-                    </select>
-                </div>
-                <div class="modal-actions">
-                    <button class="btn-cancel" onclick="closePublishModal()">取消</button>
-                    <button class="btn-save" id="publishBtn" onclick="doPublish()">发布</button>
                 </div>
             </div>
         </div>
@@ -1879,63 +1838,226 @@
         document.getElementById('manageModal').addEventListener('click', function(e) {
             if (e.target === this) closeManageModal();
         });
-        document.getElementById('publishModal').addEventListener('click', function(e) {
-            if (e.target === this) closePublishModal();
-        });
 
-        // ========== 发布到 CogNexus ==========
+        // ========== CogNexus Tab ==========
 
-        function openPublishModal(namespace, name) {
-            document.getElementById('publishNamespace').value = `${name} (${namespace})`;
-            document.getElementById('publishNamespace').dataset.ns = namespace;
-            document.getElementById('publishModal').classList.add('show');
-        }
+        let _cognexusConfig = null;
 
-        function closePublishModal() {
-            document.getElementById('publishModal').classList.remove('show');
-        }
-
-        async function doPublish() {
-            const namespace = document.getElementById('publishNamespace').dataset.ns;
-            const cognexusUrl = document.getElementById('publishCognexusUrl').value.trim();
-            const username = document.getElementById('publishUsername').value.trim();
-            const password = document.getElementById('publishPassword').value;
-            const tokenCount = parseInt(document.getElementById('publishTokenCount').value) || 10;
-            const tokenPrice = parseInt(document.getElementById('publishTokenPrice').value) || 5;
-            const tokenScope = document.getElementById('publishTokenScope').value;
-
-            if (!username || !password) {
-                alert('请输入 CogNexus 登录凭证');
+        async function loadCogNexusConfig() {
+            const token = TokenManager.get();
+            const container = document.getElementById('cognexusContent');
+            if (!token) {
+                container.innerHTML = '<div style="color:var(--text-3);text-align:center;padding:12px;">请先登录</div>';
                 return;
             }
 
-            const btn = document.getElementById('publishBtn');
-            btn.disabled = true;
-            btn.textContent = '发布中...';
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=default`);
+                if (!res.ok) throw new Error('Failed');
+                _cognexusConfig = await res.json();
+                renderCogNexusPanel(_cognexusConfig);
+            } catch (e) {
+                container.innerHTML = '<div style="color:var(--rose);text-align:center;padding:12px;">加载失败</div>';
+            }
+        }
+
+        function renderCogNexusPanel(config) {
+            const container = document.getElementById('cognexusContent');
+            const published = config.published;
+            const stock = config.stock || {};
+
+            // Find product configs
+            const products = config.token_products || [];
+            const qaProduct = products.find(p => p.type === 'qa') || { enabled: true, scope: 'qa_public', qa_limit: 20, price: 10, duration: '30d', auto_stock: 10 };
+            const browseProduct = products.find(p => p.type === 'browse') || { enabled: true, scope: 'browse_public', price: 5, duration: '15d', auto_stock: 10 };
+
+            container.innerHTML = `
+                <!-- Publishing Status -->
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <div>
+                            ${published
+                                ? `<span style="color:var(--teal);">✅ 已发布到 ${config.cognexus_url || 'wielding.ai'}</span>
+                                   ${config.agent_id ? `<div style="font-size:0.78em;color:var(--text-3);margin-top:4px;">Agent ID: ${config.agent_id}</div>` : ''}`
+                                : '<span style="color:var(--text-3);">尚未发布</span>'}
+                        </div>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn-save" style="font-size:0.82em;padding:6px 14px;" onclick="publishToCogNexus()">${published ? '更新' : '发布'}</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CogNexus Credentials -->
+                <details style="margin-bottom:14px;">
+                    <summary style="cursor:pointer;font-size:0.88em;color:var(--text-2);padding:6px 0;">CogNexus 登录凭证</summary>
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-top:8px;">
+                        <div class="form-group">
+                            <label style="font-size:0.82em;">用户名</label>
+                            <input type="text" id="cnxUsername" value="${config.cognexus_username || ''}" placeholder="CogNexus 用户名">
+                        </div>
+                        <div class="form-group">
+                            <label style="font-size:0.82em;">密码</label>
+                            <input type="password" id="cnxPassword" placeholder="CogNexus 密码">
+                        </div>
+                    </div>
+                </details>
+
+                <!-- Token Products -->
+                <div style="margin-bottom:14px;">
+                    <div style="font-size:0.88em;color:var(--text-2);margin-bottom:10px;font-weight:600;">Token 商品</div>
+
+                    <!-- QA Token -->
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                            <span style="font-weight:600;">💬 问答 Token</span>
+                            <label style="display:flex;align-items:center;gap:6px;font-size:0.82em;cursor:pointer;">
+                                <input type="checkbox" id="cnxQaEnabled" ${qaProduct.enabled ? 'checked' : ''}> 启用
+                            </label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-size:0.78em;">单价 (ATP)</label>
+                                <input type="number" id="cnxQaPrice" value="${qaProduct.price}" min="1" style="width:100%;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-size:0.78em;">问答次数</label>
+                                <input type="number" id="cnxQaLimit" value="${qaProduct.qa_limit}" min="1" style="width:100%;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-size:0.78em;">有效期</label>
+                                <input type="text" id="cnxQaDuration" value="${qaProduct.duration}" placeholder="30d" style="width:100%;">
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:0.82em;">
+                            <span style="color:var(--text-3);">库存: ${stock['qa_public'] || 0} 个可用</span>
+                            <button class="btn-save" style="font-size:0.78em;padding:4px 10px;" onclick="restockTokens('qa_public')">补货 +10</button>
+                        </div>
+                    </div>
+
+                    <!-- Browse Token -->
+                    <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                            <span style="font-weight:600;">👁️ 信息访问 Token</span>
+                            <label style="display:flex;align-items:center;gap:6px;font-size:0.82em;cursor:pointer;">
+                                <input type="checkbox" id="cnxBrowseEnabled" ${browseProduct.enabled ? 'checked' : ''}> 启用
+                            </label>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-size:0.78em;">单价 (ATP)</label>
+                                <input type="number" id="cnxBrowsePrice" value="${browseProduct.price}" min="1" style="width:100%;">
+                            </div>
+                            <div class="form-group" style="margin-bottom:0;">
+                                <label style="font-size:0.78em;">有效期</label>
+                                <input type="text" id="cnxBrowseDuration" value="${browseProduct.duration}" placeholder="15d" style="width:100%;">
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:0.82em;">
+                            <span style="color:var(--text-3);">库存: ${stock['browse_public'] || 0} 个可用</span>
+                            <button class="btn-save" style="font-size:0.78em;padding:4px 10px;" onclick="restockTokens('browse_public')">补货 +10</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- React Configuration -->
+                <div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                        <span style="font-weight:600;">⚡ React 定价</span>
+                        <label style="display:flex;align-items:center;gap:6px;font-size:0.82em;cursor:pointer;">
+                            <input type="checkbox" id="cnxReactEnabled" ${config.react_enabled !== false ? 'checked' : ''}> 启用
+                        </label>
+                    </div>
+                    <div class="form-group" style="margin-bottom:6px;">
+                        <label style="font-size:0.78em;">每次 React 价格 (ATP)</label>
+                        <input type="number" id="cnxReactPrice" value="${config.react_price || 20}" min="0" style="width:120px;">
+                    </div>
+                    <div style="font-size:0.76em;color:var(--text-3);">Simulation 任务中每次 Agent 回应将按此价格收费</div>
+                </div>
+
+                <!-- Save Button -->
+                <div class="modal-actions">
+                    <button class="btn-save" onclick="saveCogNexusConfig()">保存配置</button>
+                </div>
+            `;
+        }
+
+        async function saveCogNexusConfig() {
+            const token = TokenManager.get();
+            if (!token) { alert('请先登录'); return; }
+
+            const data = {
+                cognexus_username: document.getElementById('cnxUsername').value.trim(),
+                react_enabled: document.getElementById('cnxReactEnabled').checked,
+                react_price: parseInt(document.getElementById('cnxReactPrice').value) || 20,
+                token_products: [
+                    {
+                        type: 'qa',
+                        enabled: document.getElementById('cnxQaEnabled').checked,
+                        scope: 'qa_public',
+                        qa_limit: parseInt(document.getElementById('cnxQaLimit').value) || 20,
+                        price: parseInt(document.getElementById('cnxQaPrice').value) || 10,
+                        duration: document.getElementById('cnxQaDuration').value.trim() || '30d',
+                        auto_stock: 10
+                    },
+                    {
+                        type: 'browse',
+                        enabled: document.getElementById('cnxBrowseEnabled').checked,
+                        scope: 'browse_public',
+                        price: parseInt(document.getElementById('cnxBrowsePrice').value) || 5,
+                        duration: document.getElementById('cnxBrowseDuration').value.trim() || '15d',
+                        auto_stock: 10
+                    }
+                ]
+            };
 
             try {
-                const res = await fetch(`${API_BASE}/api/hub/publish`, {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus?token=${token}&ns=default`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await res.json();
+                if (result.success) {
+                    alert('CogNexus 配置已保存');
+                    loadCogNexusConfig();
+                } else {
+                    alert('保存失败: ' + (result.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('保存失败: ' + e.message);
+            }
+        }
+
+        async function publishToCogNexus() {
+            const token = TokenManager.get();
+            if (!token) { alert('请先登录'); return; }
+
+            const username = document.getElementById('cnxUsername').value.trim();
+            const password = document.getElementById('cnxPassword').value;
+
+            if (!username || !password) {
+                alert('请在凭证区域输入 CogNexus 用户名和密码');
+                return;
+            }
+
+            if (!confirm('确定发布到 CogNexus？将创建 Token 并推送。')) return;
+
+            // Save config first
+            await saveCogNexusConfig();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus/publish?token=${token}&ns=default`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        namespace,
-                        cognexus_url: cognexusUrl,
-                        username,
-                        password,
-                        token_config: {
-                            count: tokenCount,
-                            scope: tokenScope,
-                            duration: '30d',
-                            unit_price: tokenPrice
-                        }
+                        cognexus_username: username,
+                        cognexus_password: password
                     })
                 });
-
                 const data = await res.json();
-
                 if (data.success) {
-                    alert(`✅ 发布成功！\n\nAgent ID: ${data.agent_id}\n创建了 ${data.tokens_created} 个 Token\n\n${data.created ? '新建' : '更新'}完成`);
-                    closePublishModal();
+                    alert(`✅ 发布成功！\n\nAgent ID: ${data.agent_id}\n创建了 ${data.tokens_created} 个 Token`);
+                    loadCogNexusConfig();
                     if (confirm('是否打开 CogNexus 查看？')) {
                         window.open(data.agent_url, '_blank');
                     }
@@ -1944,9 +2066,38 @@
                 }
             } catch (e) {
                 alert('❌ 网络错误: ' + e.message);
-            } finally {
-                btn.disabled = false;
-                btn.textContent = '发布';
+            }
+        }
+
+        async function restockTokens(scope) {
+            const token = TokenManager.get();
+            if (!token) { alert('请先登录'); return; }
+
+            const password = document.getElementById('cnxPassword').value;
+            if (!password) {
+                alert('请先输入 CogNexus 密码');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${currentNs}/cognexus/restock?token=${token}&ns=default`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        scope: scope,
+                        count: 10,
+                        cognexus_password: password
+                    })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`✅ 补货成功！创建了 ${data.tokens_created} 个 Token`);
+                    loadCogNexusConfig();
+                } else {
+                    alert('❌ 补货失败: ' + (data.error || '未知错误'));
+                }
+            } catch (e) {
+                alert('❌ 网络错误: ' + e.message);
             }
         }
 
