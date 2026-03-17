@@ -1316,7 +1316,7 @@
             if (!token) {
                 // Try without token for read-only browsing
                 try {
-                    const res = await fetch(`${API_BASE}/api/profiles?ns=default`);
+                    const res = await fetch(`${API_BASE}/api/profiles?ns=${currentNs}`);
                     if (res.ok) {
                         const data = await res.json();
                         const profiles = data.profiles || [];
@@ -1329,7 +1329,7 @@
             }
 
             try {
-                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=default`);
+                const res = await fetch(`${API_BASE}/api/profiles?token=${token}&ns=${currentNs}`);
                 if (!res.ok) throw new Error('Failed');
                 const data = await res.json();
                 const profiles = data.profiles || [];
