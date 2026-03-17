@@ -1860,7 +1860,7 @@
                     const statusColor = (t.revoked || isExpired) ? 'var(--rose)' : 'var(--teal)';
                     const copyBtn = t.url ? `<button class="mt-copy" onclick="copyTokenUrl('${t.url}')" title="复制链接">📋</button>` : '';
                     const revokeBtn = (!t.revoked && !isExpired && window._isFullAccess)
-                        ? `<button class="mt-copy" onclick="revokeToken('${t.token_id}')" title="撤销" style="color:var(--rose);">✕</button>`
+                        ? `<button class="mt-copy" onclick="revokeToken('${t.token_full}')" title="撤销" style="color:var(--rose);">✕</button>`
                         : '';
                     return `<div class="manage-token-item"${t.revoked ? ' style="opacity:0.5;"' : ''}>
                         <span class="mt-scope ${t.scope}">${t.scope_label}</span>
