@@ -660,6 +660,47 @@ async def validate_hub_token(token: str = Query(..., description="要验证的 T
     }
 
 
+# ==================== Simulation React API ====================
+
+class SimulationReactRequest(BaseModel):
+    simulation_id: str
+    round_id: str = ""
+    prompt: str
+    prompt_type: str = "predictive"   # "narrative" | "predictive"
+    description: str = ""
+    outcome_options: list = ["yes", "no"]
+    previous_context: str = ""
+
+
+@app.post("/api/simulation/react")
+async def simulation_react(
+    request: SimulationReactRequest,
+    token_info: TokenInfo = Depends(verify_token),
+    ns: str = "default"
+):
+    """
+    Agent 对 Simulation 问题进行反应
+
+    统一端点: Character 和 Human Agent 都自动生成
+    - narrative: 自由文本回应 + 关键点提取
+    - predictive: 结构化立场 + 置信度
+    """
+    from sim_react import react
+
+    result = react(
+        prompt=request.prompt,
+        prompt_type=request.prompt_type,
+        namespace=ns,
+        description=request.description,
+        outcome_options=request.outcome_options,
+        previous_context=request.previous_context
+    )
+
+    return result
+
+
+# ==================== Visual Data API ====================
+
 @app.get("/api/visual/graph")
 async def get_graph(
     token_info: TokenInfo = Depends(verify_token),
@@ -1522,7 +1563,71 @@ async def update_profile_api(
         config["persona"].update(request.persona)
     
     pm.save_profile_config(namespace, config)
-    
+
+    return {"success": True}
+
+
+@app.get("/api/profiles/{namespace}/llm")
+async def get_profile_llm(
+    namespace: str,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """获取 Profile 的 LLM 配置（API Key 脱敏）"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+
+    from profile_manager import ProfileManager
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    llm = config.get("llm", {})
+    return {
+        "base_url": llm.get("base_url", ""),
+        "model": llm.get("model", ""),
+        "has_key": bool(llm.get("api_key"))
+    }
+
+
+@app.put("/api/profiles/{namespace}/llm")
+async def update_profile_llm(
+    namespace: str,
+    request: Request,
+    token_info: TokenInfo = Depends(verify_token)
+):
+    """更新 Profile 的 LLM 配置"""
+    if token_info.namespace != "default":
+        raise HTTPException(status_code=403, detail="只能从 default namespace 管理角色")
+    if not can_see_private(token_info):
+        raise HTTPException(status_code=403, detail="Full access required")
+
+    from profile_manager import ProfileManager
+    pm = ProfileManager()
+    config = pm.load_profile_config(namespace)
+    if not config:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    data = await request.json()
+
+    # 清除配置
+    if data.get("clear"):
+        config["llm"] = {}
+        pm.save_profile_config(namespace, config)
+        return {"success": True}
+
+    llm = config.get("llm", {})
+    if data.get("base_url") is not None:
+        llm["base_url"] = data["base_url"]
+    if data.get("model") is not None:
+        llm["model"] = data["model"]
+    if data.get("api_key") and data["api_key"] != "":
+        llm["api_key"] = data["api_key"]
+
+    config["llm"] = llm
+    pm.save_profile_config(namespace, config)
     return {"success": True}
 
 

@@ -980,6 +980,48 @@
             </div>
         </div>
 
+        <!-- LLM 配置弹窗 -->
+        <div class="modal-overlay" id="llmConfigModal">
+            <div class="modal-content" style="max-width: 460px;">
+                <div class="modal-header">
+                    <h3>🤖 LLM 配置</h3>
+                    <button class="modal-close" onclick="closeLLMConfig()">×</button>
+                </div>
+                <p style="color: var(--text-2); font-size: 0.85em; margin-bottom: 16px;">
+                    为角色 <strong id="llmConfigNs"></strong> 配置独立的 LLM
+                </p>
+                <div class="form-group">
+                    <label>选择模型</label>
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;" id="llmProfilePresets">
+                        <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-seed-2-0-lite-260215" onclick="selectProfileLLM(this)">🌋 豆包 Seed Lite</button>
+                        <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="https://ark.cn-beijing.volces.com/api/v3" data-model="doubao-1-5-pro-32k-250115" onclick="selectProfileLLM(this)">🌋 豆包 1.5 Pro</button>
+                        <button type="button" class="profile-btn" style="font-size:0.85em;" data-base="custom" onclick="selectProfileLLM(this)">⚙️ 自定义</button>
+                    </div>
+                </div>
+                <div id="llmCustomGroup" style="display:none;">
+                    <div class="form-group">
+                        <label>Base URL</label>
+                        <input type="url" id="llmProfileBaseUrl" placeholder="https://api.openai.com/v1">
+                    </div>
+                    <div class="form-group">
+                        <label>模型</label>
+                        <input type="text" id="llmProfileModel" placeholder="gpt-4o">
+                    </div>
+                </div>
+                <div id="llmKeyGroup" style="display:none;">
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="llmProfileApiKey" placeholder="输入 API Key...">
+                        <div id="llmKeyStatus" style="font-size:0.8em;color:var(--text-3);margin-top:4px;"></div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="clearProfileLLM()">清除配置</button>
+                    <button class="btn-save" onclick="saveProfileLLM()">保存</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Token Input -->
         <div class="token-section animate-in delay-1" id="tokenSection">
             <h3>输入访问 Token</h3>
@@ -1510,6 +1552,130 @@
             }
         }
 
+        // ========== LLM 配置 ==========
+        let _llmConfigNs = '';
+
+        async function openLLMConfig(ns) {
+            _llmConfigNs = ns;
+            document.getElementById('llmConfigNs').textContent = ns;
+            // Reset state
+            document.getElementById('llmCustomGroup').style.display = 'none';
+            document.getElementById('llmKeyGroup').style.display = 'none';
+            document.getElementById('llmProfileBaseUrl').value = '';
+            document.getElementById('llmProfileModel').value = '';
+            document.getElementById('llmProfileApiKey').value = '';
+            document.getElementById('llmKeyStatus').textContent = '';
+            document.querySelectorAll('#llmProfilePresets .profile-btn').forEach(b => b.style.border = '');
+
+            // Fetch current config
+            const token = TokenManager.get();
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${ns}/llm?token=${token}&ns=default`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.base_url || data.model) {
+                        // Try to match a preset
+                        let matched = false;
+                        document.querySelectorAll('#llmProfilePresets .profile-btn[data-base]').forEach(btn => {
+                            if (btn.dataset.base !== 'custom' && btn.dataset.base === data.base_url && btn.dataset.model === data.model) {
+                                btn.style.border = '2px solid var(--accent)';
+                                matched = true;
+                            }
+                        });
+                        if (!matched && data.base_url) {
+                            // Show custom fields
+                            document.getElementById('llmCustomGroup').style.display = 'block';
+                            document.getElementById('llmProfileBaseUrl').value = data.base_url;
+                            document.getElementById('llmProfileModel').value = data.model;
+                            document.querySelectorAll('#llmProfilePresets .profile-btn').forEach(b => {
+                                if (b.dataset.base === 'custom') b.style.border = '2px solid var(--accent)';
+                            });
+                        }
+                        document.getElementById('llmKeyGroup').style.display = 'block';
+                        if (data.has_key) {
+                            document.getElementById('llmKeyStatus').textContent = '已配置 API Key（留空保持不变）';
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Load LLM config error:', e);
+            }
+
+            document.getElementById('llmConfigModal').classList.add('show');
+        }
+
+        function selectProfileLLM(btn) {
+            // Clear all highlights
+            document.querySelectorAll('#llmProfilePresets .profile-btn').forEach(b => b.style.border = '');
+            btn.style.border = '2px solid var(--accent)';
+
+            if (btn.dataset.base === 'custom') {
+                document.getElementById('llmCustomGroup').style.display = 'block';
+                document.getElementById('llmProfileBaseUrl').value = '';
+                document.getElementById('llmProfileModel').value = '';
+            } else {
+                document.getElementById('llmCustomGroup').style.display = 'none';
+                document.getElementById('llmProfileBaseUrl').value = btn.dataset.base;
+                document.getElementById('llmProfileModel').value = btn.dataset.model;
+            }
+            document.getElementById('llmKeyGroup').style.display = 'block';
+        }
+
+        async function saveProfileLLM() {
+            const baseUrl = document.getElementById('llmProfileBaseUrl').value.trim();
+            const model = document.getElementById('llmProfileModel').value.trim();
+            const apiKey = document.getElementById('llmProfileApiKey').value.trim();
+
+            if (!baseUrl || !model) {
+                alert('请选择或填写模型配置');
+                return;
+            }
+
+            const token = TokenManager.get();
+            const body = { base_url: baseUrl, model: model };
+            if (apiKey) body.api_key = apiKey;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${_llmConfigNs}/llm?token=${token}&ns=default`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('LLM 配置已保存');
+                    closeLLMConfig();
+                } else {
+                    alert('保存失败: ' + (data.detail || '未知错误'));
+                }
+            } catch (e) {
+                alert('保存失败: ' + e.message);
+            }
+        }
+
+        async function clearProfileLLM() {
+            if (!confirm('确定清除 LLM 配置？将回退到环境变量或 Gateway。')) return;
+            const token = TokenManager.get();
+            try {
+                const res = await fetch(`${API_BASE}/api/profiles/${_llmConfigNs}/llm?token=${token}&ns=default`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ clear: true })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('LLM 配置已清除');
+                    closeLLMConfig();
+                }
+            } catch (e) {
+                alert('清除失败: ' + e.message);
+            }
+        }
+
+        function closeLLMConfig() {
+            document.getElementById('llmConfigModal').classList.remove('show');
+        }
+
         async function init() {
             // Debug: 显示当前 namespace
             console.log('[DEBUG] NAMESPACE:', NAMESPACE, 'URL:', window.location.href);
@@ -1641,6 +1807,7 @@
                             </div>
                         </div>
                         <div class="profile-actions">
+                            <button class="profile-btn" onclick="openLLMConfig('${p.namespace}')">🤖 LLM</button>
                             <button class="profile-btn" onclick="openPublishModal('${p.namespace}', '${p.name || p.namespace}')">📤 发布</button>
                             <button class="profile-btn primary" onclick="openProfile('${p.namespace}')">进入</button>
                             ${p.namespace !== 'default' ? `<button class="profile-btn danger" onclick="deleteProfile('${p.namespace}')">删除</button>` : ''}
