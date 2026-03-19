@@ -328,7 +328,12 @@ def react_narrative(
 
     system_prompt = _load_system_prompt(namespace)
 
-    user_prompt = f"""{prompt}
+    from datetime import datetime as _dt
+    now_str = _dt.now().strftime("%Y年%m月%d日")
+
+    user_prompt = f"""当前日期: {now_str}
+
+{prompt}
 
 背景信息:
 {description}
@@ -339,7 +344,7 @@ def react_narrative(
 你的相关知识:
 {facts_context if facts_context else "（无直接相关知识）"}
 
-请以你的身份和视角做出回应。"""
+请以你的身份和视角做出回应。注意基于当前日期和你的知识做判断，不要使用过时的数据。"""
 
     response = _call_llm(system=system_prompt, user=user_prompt, max_tokens=800, namespace=namespace)
 
@@ -387,7 +392,12 @@ def react_predictive(
     system_prompt = _load_system_prompt(namespace)
     options_str = " / ".join(outcome_options)
 
-    user_prompt = f"""{prompt}
+    from datetime import datetime as _dt
+    now_str = _dt.now().strftime("%Y年%m月%d日")
+
+    user_prompt = f"""当前日期: {now_str}
+
+{prompt}
 
 背景信息:
 {description}
@@ -398,7 +408,7 @@ def react_predictive(
 你的相关知识:
 {facts_context if facts_context else "（无直接相关知识）"}
 
-请先简要说明你的分析，然后给出预测:
+请基于当前日期和你的知识进行分析，不要使用过时的数据。先简要说明你的分析，然后给出预测:
 
 ---PREDICTION---
 {{

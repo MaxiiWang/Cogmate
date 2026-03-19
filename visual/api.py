@@ -377,7 +377,7 @@ async def get_health(token_info: TokenInfo = Depends(verify_token), ns: str = "d
     """获取健康度数据"""
     from graph_health import get_graph_metrics, evaluate_health
 
-    metrics = get_graph_metrics()
+    metrics = get_graph_metrics(namespace=ns)
     health = evaluate_health(metrics)
 
     return {

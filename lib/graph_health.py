@@ -33,9 +33,12 @@ THRESHOLDS = {
 }
 
 
-def get_graph_metrics() -> Dict:
+def get_graph_metrics(namespace: str = "default") -> Dict:
     """
     获取图谱健康度指标
+    
+    Args:
+        namespace: 只统计指定 namespace 的节点，默认 "default"
     
     Returns:
         {
@@ -47,39 +50,48 @@ def get_graph_metrics() -> Dict:
             'contradiction_count': int,
             'contradiction_ratio': float,
             'hub_nodes': list,  # 高连接度节点
-            'timestamp': str
+            'timestamp': str,
+            'namespace': str
         }
     """
     driver = get_neo4j()
     
     with driver.session() as session:
-        # 基础统计
-        total_nodes = session.run('MATCH (n:Fact) RETURN count(n) as c').single()['c']
-        total_edges = session.run('MATCH ()-[r]->() RETURN count(r) as c').single()['c']
+        # 基础统计（按 namespace 过滤）
+        total_nodes = session.run(
+            'MATCH (n:Fact) WHERE n.namespace = $ns RETURN count(n) as c',
+            ns=namespace
+        ).single()['c']
+        total_edges = session.run(
+            'MATCH (a:Fact)-[r]->(b:Fact) WHERE a.namespace = $ns AND b.namespace = $ns RETURN count(r) as c',
+            ns=namespace
+        ).single()['c']
         
-        # 孤立节点
+        # 孤立节点（同 namespace 内无连接）
         orphan_count = session.run('''
             MATCH (n:Fact)
-            WHERE NOT (n)-[]-()
+            WHERE n.namespace = $ns AND NOT (n)-[]-(:Fact {namespace: $ns})
             RETURN count(n) as c
-        ''').single()['c']
+        ''', ns=namespace).single()['c']
         
         # 矛盾关系
         contradiction_count = session.run('''
-            MATCH ()-[r:矛盾]->()
+            MATCH (a:Fact)-[r:矛盾]->(b:Fact)
+            WHERE a.namespace = $ns AND b.namespace = $ns
             RETURN count(r) as c
-        ''').single()['c']
+        ''', ns=namespace).single()['c']
         
         # Hub 节点（度数 >= 4）
         hub_result = session.run('''
             MATCH (n:Fact)
-            OPTIONAL MATCH (n)-[r]-()
+            WHERE n.namespace = $ns
+            OPTIONAL MATCH (n)-[r]-(:Fact {namespace: $ns})
             WITH n, count(r) as degree
             WHERE degree >= 4
             RETURN n.fact_id as id, n.summary as summary, degree
             ORDER BY degree DESC
             LIMIT 5
-        ''')
+        ''', ns=namespace)
         hub_nodes = [
             {'id': r['id'][:8], 'summary': r['summary'][:40] if r['summary'] else '', 'degree': r['degree']}
             for r in hub_result
@@ -88,14 +100,15 @@ def get_graph_metrics() -> Dict:
         # 度数分布
         degree_result = session.run('''
             MATCH (n:Fact)
-            OPTIONAL MATCH (n)-[r]-()
+            WHERE n.namespace = $ns
+            OPTIONAL MATCH (n)-[r]-(:Fact {namespace: $ns})
             WITH n, count(r) as degree
             RETURN degree, count(*) as cnt
             ORDER BY degree
-        ''')
+        ''', ns=namespace)
         degree_distribution = {r['degree']: r['cnt'] for r in degree_result}
     
-    driver.close()
+    # 不要 close driver，它是共享连接池
     
     # 计算比率
     orphan_ratio = orphan_count / total_nodes if total_nodes > 0 else 0
@@ -112,7 +125,8 @@ def get_graph_metrics() -> Dict:
         'contradiction_ratio': contradiction_ratio,
         'hub_nodes': hub_nodes,
         'degree_distribution': degree_distribution,
-        'timestamp': datetime.now().isoformat()
+        'timestamp': datetime.now().isoformat(),
+        'namespace': namespace
     }
 
 
@@ -227,21 +241,23 @@ def get_health_history(days: int = 7) -> List[Dict]:
     return []
 
 
-def generate_health_report(verbose: bool = False) -> str:
+def generate_health_report(verbose: bool = False, namespace: str = "default") -> str:
     """
     生成图谱健康度报告
     
     Args:
         verbose: 是否包含详细信息
+        namespace: 只统计指定 namespace，默认 "default"
     
     Returns:
         格式化的报告文本
     """
-    metrics = get_graph_metrics()
+    metrics = get_graph_metrics(namespace=namespace)
     health = evaluate_health(metrics)
     
+    ns_label = f" [{namespace}]" if namespace != "default" else ""
     lines = [
-        f"🕸️ **图谱健康度报告**",
+        f"🕸️ **图谱健康度报告**{ns_label}",
         f"",
         f"📊 **基础统计**",
         f"   节点总数: {metrics['total_nodes']}",

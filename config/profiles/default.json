@@ -20,5 +20,31 @@
     "base_url": "https://ark.cn-beijing.volces.com/api/v3",
     "model": "doubao-seed-2-0-lite-260215",
     "api_key": "47eb48b5-2da6-415a-9ce6-6e19e3777a6d"
+  },
+  "cognexus": {
+    "react_enabled": true,
+    "react_price": 20,
+    "token_products": [
+      {
+        "type": "qa",
+        "enabled": true,
+        "scope": "qa_public",
+        "qa_limit": 20,
+        "price": 10,
+        "duration": "30d",
+        "auto_stock": 10
+      },
+      {
+        "type": "browse",
+        "enabled": true,
+        "scope": "browse_public",
+        "price": 500,
+        "duration": "15d",
+        "auto_stock": 10
+      }
+    ],
+    "cognexus_username": "MaxWang",
+    "published": true,
+    "agent_id": "agt_66e5f95b571e"
   }
 }

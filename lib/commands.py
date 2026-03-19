@@ -356,15 +356,25 @@ class CommandHandler:
         """
         /health - 图谱健康度报告
         /health verbose - 包含详细度数分布
+        /health ns=<namespace> - 指定 namespace
         """
         try:
             from graph_health import generate_health_report, get_graph_metrics, get_improvement_suggestions
             
             verbose = 'verbose' in args.lower() or '-v' in args
-            report = generate_health_report(verbose=verbose)
+            
+            # 解析 namespace 参数，默认 default
+            namespace = "default"
+            if 'ns=' in args:
+                import re
+                ns_match = re.search(r'ns=(\w+)', args)
+                if ns_match:
+                    namespace = ns_match.group(1)
+            
+            report = generate_health_report(verbose=verbose, namespace=namespace)
             
             # 获取改进建议
-            metrics = get_graph_metrics()
+            metrics = get_graph_metrics(namespace=namespace)
             suggestions = get_improvement_suggestions(metrics)
             
             if suggestions and suggestions[0] != "✅ 图谱健康度良好，继续保持！":
