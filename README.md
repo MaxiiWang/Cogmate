@@ -1,8 +1,10 @@
 # Cogmate 🧠
 
-**个人知识管理系统 - 你的第二大脑**
+**English | [中文](README.zh-CN.md)**
 
-将碎片化的想法、事实、决策持久化，通过图谱发现知识间的隐藏关联。
+**Personal Knowledge Management System - Your Second Brain**
+
+Persist fragmented thoughts, facts, and decisions. Discover hidden connections through knowledge graphs.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
@@ -10,141 +12,135 @@
 
 > ⚠️ **Vibe Coding | Work in Progress | Experimental**
 > 
-> 本项目采用 Vibe Coding 方式开发——由 AI Agent 主导编码，人类负责方向把控和验收。
+> This project is developed using Vibe Coding — AI Agents lead the coding, humans steer direction and review.
 > 
-> **这是一个实验性项目，仍在积极开发中：**
-> - 代码可能存在 bug 和不完善之处
-> - API 和数据结构可能随时变更
-> - 部分功能尚未经过充分测试
+> **This is an experimental project under active development:**
+> - Code may contain bugs and rough edges
+> - APIs and data structures may change at any time
+> - Some features have not been thoroughly tested
 > 
-> **免责声明：** 本项目按"原样"提供，不提供任何明示或暗示的保证。使用本项目的风险由用户自行承担。作者不对因使用本项目而导致的任何数据丢失、系统故障或其他损失负责。建议在非生产环境中测试后再投入使用。
+> **Disclaimer:** This project is provided "as-is" without warranty of any kind. Use at your own risk. The author is not responsible for any data loss, system failures, or other damages resulting from the use of this project. Test in a non-production environment before deploying.
 
 ---
 
-## 🚀 快速开始
+## ✨ Features
 
-### 推荐方式：让你的 Agent 自主安装
+- **Triple-Store Architecture** - SQLite (metadata) + Qdrant (vector search) + Neo4j (knowledge graph)
+- **Semantic Search** - Bilingual (Chinese/English) vector search powered by BGE-M3
+- **Relation Discovery** - Automatically find connections and contradictions between knowledge
+- **Multi-Profile System** - Manage multiple knowledge personas in one instance (namespace-isolated)
+- **Per-Profile LLM** - Configure different LLM models for different profiles
+- **Abstraction Layer** - Distill high-level insights from concrete facts
+- **Temporal Tracking** - Distinguish permanent / time-bound / historical / predictive knowledge
+- **Challenge Mechanism** - Detect tension between new knowledge and existing beliefs
+- **Visual Interface** - 3D knowledge globe, timeline, tree view, graph network
+- **CogNexus Integration** - One-click publish profiles to the [CogNexus](https://github.com/MaxiiWang/CogNexus) marketplace
+- **Token Access Control** - Share your knowledge base with others via scoped tokens
 
-**本项目设计为与 AI Agent 协同工作。** 最简单的使用方式是将项目地址告诉你的 Agent，让它自主完成安装和配置：
+---
+
+## 🚀 Quick Start
+
+### Recommended: Let Your Agent Install It
+
+**This project is designed to work with AI Agents.** The easiest way to get started is to hand the repo URL to your agent:
 
 ```
-请帮我安装这个项目：https://github.com/MaxiiWang/Cogmate
+Please install this project: https://github.com/MaxiiWang/Cogmate
 
-阅读 README.md 和 SETUP.md 了解项目结构，
-然后按照指引完成数据库部署和配置。
-安装完成后，将 AGENT.md 的内容整合到你的行为规范中。
+Read README.md and SETUP.md to understand the project structure,
+then follow the guide to deploy databases and configure.
+After setup, integrate AGENT.md into your behavior rules.
 ```
 
-Agent 会：
-1. 克隆仓库并阅读文档
-2. 安装依赖和启动数据库
-3. 配置环境变量
-4. 将 `AGENT.md` 中的指令纳入自己的行为规范
-5. 开始作为你的知识管理代理工作
+Your agent will:
+1. Clone the repo and read the docs
+2. Install dependencies and start databases
+3. Configure environment variables
+4. Integrate `AGENT.md` instructions into its behavior
+5. Start working as your knowledge management agent
 
-### 备选方式：手动安装
+### Alternative: Manual Installation
 
 ```bash
 git clone https://github.com/MaxiiWang/Cogmate.git
-cd SimWorld
+cd Cogmate
 chmod +x setup.sh
 ./setup.sh
 ```
 
-详细步骤参见 [SETUP.md](SETUP.md)。
+See [SETUP.md](SETUP.md) for detailed steps.
 
 ---
 
-## 🤖 Agent 能力依赖
+## 🤖 Agent Capability Dependencies
 
-本项目是一个**基础设施层**，核心能力依赖于你使用的 AI Agent：
+This project is an **infrastructure layer** — core capabilities depend on your AI Agent:
 
-| 能力 | 说明 | 项目提供 |
-|------|------|---------|
-| **LLM 推理** | 理解语义、生成回答 | ❌ 需 Agent 自带 |
-| **多模态** | 图片/语音理解 | ❌ 需 Agent 自带 |
-| **聊天接入** | Telegram/微信/Discord | ❌ 需 Agent 自带 |
-| **定时任务** | Cron 调度 | ❌ 需 Agent 自带 |
-| **知识存储** | 三库写入/检索 | ✅ 本项目提供 |
-| **关系发现** | 图谱关联 | ✅ 本项目提供 |
-| **可视化** | Web 界面 | ✅ 本项目提供 |
+| Capability | Description | Provided by Project |
+|------------|-------------|-------------------|
+| **LLM Reasoning** | Semantic understanding, response generation | ❌ Requires Agent |
+| **Multimodal** | Image/voice understanding | ❌ Requires Agent |
+| **Chat Integration** | Telegram/WeChat/Discord | ❌ Requires Agent |
+| **Scheduled Tasks** | Cron scheduling | ❌ Requires Agent |
+| **Knowledge Storage** | Triple-store read/write | ✅ Provided |
+| **Relation Discovery** | Graph-based connections | ✅ Provided |
+| **Visualization** | Web interface | ✅ Provided |
 
-### 参考配置（作者使用）
+### Reference Setup (Author's Config)
 
-我使用 [OpenClaw](https://github.com/openclaw/openclaw) 作为 Agent 运行时：
+I use [OpenClaw](https://github.com/openclaw/openclaw) as the Agent runtime:
 
 ```yaml
-# OpenClaw 配置参考
-model: claude-sonnet-4-20250514   # 主力模型
-thinking: low                       # 推理模式
+# OpenClaw config reference
+model: claude-sonnet-4-20250514   # Primary model
+thinking: low                       # Reasoning mode
 
-# 聊天接入
+# Chat integration
 telegram:
   enabled: true
   token: ${TELEGRAM_BOT_TOKEN}
-  
-# 定时任务
-cron:
-  - schedule: "0 9 * * *"           # 每天 09:00
-    task: "执行晨间知识回顾"
-  - schedule: "0 20 * * *"          # 每天 20:00
-    task: "生成今日知识报告"
-  - schedule: "0 20 * * 0"          # 每周日 20:00
-    task: "生成周报并检查图谱健康"
 ```
 
-其他兼容的 Agent 框架：
+Other compatible Agent frameworks:
 - [Claude Code](https://github.com/anthropics/claude-code)
 - [Cursor](https://cursor.sh/)
-- 任何支持工具调用的 LLM Agent
+- Any LLM Agent with tool-calling support
 
 ---
 
-## ✨ 特性
+## 📖 Usage
 
-- **三库协同** - SQLite（元数据）+ Qdrant（向量搜索）+ Neo4j（知识图谱）
-- **语义检索** - 基于 BGE-M3 的中英文混合向量搜索
-- **关系发现** - 自动发现知识间的关联和矛盾
-- **抽象层** - 从具体事实提炼高维洞察
-- **时态追踪** - 区分永久/时限/历史/预测类知识
-- **挑战机制** - 新知识与旧认知的张力检测
-- **可视化界面** - 3D 知识图谱浏览
-- **Token 访问控制** - 分享你的知识库给他人
-
----
-
-## 📖 使用方法
-
-### CLI 命令
+### CLI Commands
 
 ```bash
-# 存储知识
-./cogmate store "今天学到了一个重要概念：复利效应"
-./cogmate store "客户说系统太难用了" --type 事件 --emotion 消极
+# Store knowledge
+./cogmate store "Learned an important concept today: compound interest effect"
+./cogmate store "Client says the system is too hard to use" --type event --emotion negative
 
-# 检索知识
-./cogmate query "复利"
-./cogmate query "客户反馈" --top 10
+# Query knowledge
+./cogmate query "compound interest"
+./cogmate query "client feedback" --top 10
 
-# 创建关联
-./cogmate relate <fact_id_1> <fact_id_2> --type 支持
+# Create relations
+./cogmate relate <fact_id_1> <fact_id_2> --type supports
 
-# 查看统计
+# View statistics
 ./cogmate stats
 
-# 列出知识
+# List knowledge
 ./cogmate list --limit 20
 ```
 
-### 知识类型
+### Knowledge Types
 
-| 类型 | 说明 | 示例 |
-|------|------|------|
-| 事件 | 发生的事情 | "今天开会讨论了新方案" |
-| 观点 | 个人看法 | "我认为远程办公效率更高" |
-| 情绪 | 情感状态 | "对这个项目感到焦虑" |
-| 资讯 | 外部信息 | "GPT-5 预计明年发布" |
-| 决策 | 做出的决定 | "决定下周开始健身" |
+| Type | Description | Example |
+|------|-------------|---------|
+| Event | Something that happened | "Had a meeting about the new plan today" |
+| Opinion | Personal viewpoint | "I think remote work is more productive" |
+| Emotion | Emotional state | "Feeling anxious about this project" |
+| Info | External information | "GPT-5 expected next year" |
+| Decision | A decision made | "Decided to start exercising next week" |
 
 ### Python API
 
@@ -153,111 +149,129 @@ from lib.cogmate_core import CogmateAgent
 
 cogmate = CogmateAgent()
 
-# 存储
-fact_id = cogmate.store("学习内容", content_type="观点")
+# Store
+fact_id = cogmate.store("Learning content", content_type="opinion")
 
-# 检索
-results = cogmate.query("关键词", top_k=5)
+# Query
+results = cogmate.query("keyword", top_k=5)
 
-# 创建关联
-cogmate.create_relation(from_id, to_id, "支持", confidence=4)
+# Create relation
+cogmate.create_relation(from_id, to_id, "supports", confidence=4)
 
-# 统计
+# Statistics
 stats = cogmate.stats()
 ```
 
 ---
 
-## 🔌 可视化界面
+## 🔌 Visual Interface
 
-项目内置可视化 API，提供：
+Built-in visualization API with:
 
-- 🌍 **Globe View** - 3D 知识图谱（Three.js）
-- 🌳 **Tree View** - 抽象层树形图
-- 📅 **Timeline View** - 时间线视图
-- 💬 **Chat Panel** - 对话交互
+- 🌍 **Globe View** - 3D knowledge graph (Three.js)
+- 🕸️ **Graph View** - Relation network graph
+- 🌳 **Tree View** - Abstraction layer tree
+- 📅 **Timeline View** - Chronological timeline
+- 💬 **Chat Panel** - Conversational interaction
+- 📖 **Docs** - Built-in documentation page
 
-### 启动可视化服务
+### Start the Visual Server
 
 ```bash
 chmod +x visual/start.sh
 ./visual/start.sh
 ```
 
-### 生成访问 Token
+### Generate Access Tokens
 
 ```bash
 ./cogmate visual --duration 7d --scope full
 ```
 
-Token 权限级别：
-- `full` - 完整访问（浏览 + 问答 + 编辑）
-- `qa_public` - 公开问答（有次数限制）
-- `browse_public` - 仅浏览
+Token permission levels:
+- `full` - Full access (browse + Q&A + edit)
+- `qa_public` - Public Q&A (rate-limited)
+- `browse_public` - Browse only
 
 ---
 
-## 📁 项目结构
+## 👥 Multi-Profile System
+
+Cogmate supports multiple knowledge profiles within a single instance, each with:
+
+- **Isolated Knowledge Base** - Namespace-separated storage
+- **Independent LLM Config** - Different models per profile
+- **Separate Access Tokens** - Independent permission control
+- **CogNexus Publishing** - Publish each profile independently to the marketplace
+
+Switch between profiles via the header profile switcher in the visual interface. The management modal integrates profile management, token management, and CogNexus publishing.
+
+---
+
+## 📁 Project Structure
 
 ```
 cogmate/
-├── cogmate                 # CLI 入口脚本
-├── setup.sh              # 一键安装脚本
-├── README.md             # 本文件
-├── SETUP.md              # 详细安装指南
-├── AGENT.md              # AI Agent 指令
-├── SPEC.md               # 完整设计规范
-├── requirements.txt      # Python 依赖
-├── .env.example          # 环境变量模板
+├── cogmate               # CLI entry script
+├── setup.sh              # One-click setup
+├── README.md             # English README (this file)
+├── README.zh-CN.md       # 中文 README
+├── SETUP.md              # Detailed setup guide
+├── AGENT.md              # AI Agent instructions
+├── SPEC.md               # Full design specification
+├── requirements.txt      # Python dependencies
+├── .env.example          # Environment variable template
 │
-├── lib/                  # 核心库
-│   ├── cogmate_core.py     # 主逻辑
-│   ├── cli.py            # CLI 实现
-│   ├── config.py         # 配置管理
-│   ├── intent_handler.py # 意图识别
-│   ├── abstraction.py    # 抽象层逻辑
-│   ├── temporal_review.py# 时态审查
-│   ├── daily_report.py   # 日报生成
-│   └── visual_token.py   # Token 管理
+├── lib/                  # Core library
+│   ├── cogmate_core.py   # Main logic
+│   ├── cli.py            # CLI implementation
+│   ├── config.py         # Configuration
+│   ├── profile_manager.py# Multi-profile management
+│   ├── intent_handler.py # Intent recognition
+│   ├── relation_discovery.py # Relation discovery
+│   ├── abstraction.py    # Abstraction layer
+│   ├── temporal_review.py# Temporal review
+│   ├── daily_report.py   # Daily report generation
+│   ├── graph_health.py   # Graph health check
+│   ├── llm_answer.py     # LLM Q&A
+│   ├── sim_react.py      # Simulation interaction
+│   ├── visual_token.py   # Token management
+│   └── privacy.py        # Privacy controls
 │
-├── visual/               # 可视化界面
-│   ├── api.py            # FastAPI 后端
-│   ├── start.sh          # 启动脚本
-│   └── static/           # 前端静态文件
-│       ├── index.html    # 主页
-│       ├── globe.html    # 3D 图谱
-│       ├── tree.html     # 树形图
-│       ├── timeline.html # 时间线
-│       └── chat.html     # 对话面板
+├── visual/               # Visual interface
+│   ├── api.py            # FastAPI backend
+│   ├── start.sh          # Start script
+│   └── static/           # Frontend static files
+│       ├── index.html    # Home page
+│       ├── globe.html    # 3D globe
+│       ├── graph.html    # Relation graph
+│       ├── tree.html     # Tree view
+│       ├── timeline.html # Timeline
+│       ├── chat.html     # Chat panel
+│       └── docs.html     # Documentation
 │
-├── infra/                # 基础设施
-│   ├── docker-compose.yml# 数据库容器
-│   ├── init_qdrant.sh    # Qdrant 初始化
+├── infra/                # Infrastructure
+│   ├── docker-compose.yml# Database containers
+│   ├── init_qdrant.sh    # Qdrant initialization
 │   └── schema.sql        # SQLite schema
 │
-├── scripts/              # 定时任务脚本
-│   ├── daily_morning.sh
-│   ├── daily_evening.sh
-│   ├── weekly_report.sh
-│   └── monthly_temporal_review.sh
+├── data/                 # Data directory (gitignored)
+│   └── cogmate.db        # SQLite database
 │
-├── data/                 # 数据目录（gitignore）
-│   └── cogmate.db          # SQLite 数据库
-│
-└── config/               # 配置文件
-    └── profile.json      # 用户档案
+└── config/               # Configuration files
+    └── profile.json      # User profile
 ```
 
 ---
 
-## ⚙️ 配置
+## ⚙️ Configuration
 
-### 环境变量
+### Environment Variables
 
-复制 `.env.example` 为 `.env` 并配置：
+Copy `.env.example` to `.env` and configure:
 
 ```bash
-# 数据库连接
+# Database connections
 BRAIN_NEO4J_URI=bolt://localhost:7687
 BRAIN_NEO4J_USER=neo4j
 BRAIN_NEO4J_PASSWORD=your_password
@@ -265,45 +279,52 @@ BRAIN_NEO4J_PASSWORD=your_password
 BRAIN_QDRANT_HOST=localhost
 BRAIN_QDRANT_PORT=6333
 
-# 可选：LLM API（用于抽象层和挑战机制）
+# Optional: LLM API (for abstraction layer and challenge mechanism)
 ANTHROPIC_API_KEY=sk-ant-xxx
 ```
 
-### 用户档案
+### User Profile
 
-编辑 `config/profile.json` 设置你的信息：
+Edit `config/profile.json`:
 
 ```json
 {
-  "name": "你的名字",
-  "title": "一句话介绍",
-  "bio": "知识库描述"
+  "name": "Your Name",
+  "title": "One-line description",
+  "bio": "Knowledge base description"
 }
 ```
 
 ---
 
-## 🔐 核心原则
+## 🔐 Core Principles
 
-1. **写入权在用户手里** - 网络搜索的内容只能建议，不能自动写入
-2. **矛盾是最有价值的关联** - 不回避张力，主动发现并保留矛盾
-3. **简洁确认** - 存储后简短确认，不打断记录流
-
----
-
-## 📝 许可证
-
-MIT License - 详见 [LICENSE](LICENSE)
+1. **User Owns the Write Gate** - Web search results can only be suggested, never auto-written
+2. **Contradictions Are the Most Valuable Relations** - Embrace tension, actively discover and preserve contradictions
+3. **Concise Confirmations** - Brief acknowledgment after storage, don't interrupt the recording flow
 
 ---
 
-## 🙏 致谢
+## 🔗 Related Projects
 
-- [Qdrant](https://qdrant.tech/) - 向量数据库
-- [Neo4j](https://neo4j.com/) - 图数据库
-- [BGE-M3](https://huggingface.co/BAAI/bge-m3) - 多语言向量模型
-- [OpenClaw](https://github.com/openclaw/openclaw) - Agent 运行时
+- [CogNexus](https://github.com/MaxiiWang/CogNexus) - Distributed Cognitive Hub, Agent capability marketplace
+- [OpenClaw](https://github.com/openclaw/openclaw) - Agent runtime
 
 ---
 
-**让每一个想法都有迹可循。** 🧠
+## 📝 License
+
+MIT License - See [LICENSE](LICENSE)
+
+---
+
+## 🙏 Acknowledgments
+
+- [Qdrant](https://qdrant.tech/) - Vector database
+- [Neo4j](https://neo4j.com/) - Graph database
+- [BGE-M3](https://huggingface.co/BAAI/bge-m3) - Multilingual vector model
+- [OpenClaw](https://github.com/openclaw/openclaw) - Agent runtime
+
+---
+
+**Make every thought traceable.** 🧠
